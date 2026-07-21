@@ -61,7 +61,7 @@ class Config:
     HIDDEN_SIZES: tuple = (64, 32, 16)
 
     LEARNING_RATE: float = 1e-3
-    N_EPOCHS: int = 20
+    N_EPOCHS: int = 18
     BATCH_SIZE: int = 512
 
     LAMBDA_PF: float = 1.0
@@ -93,7 +93,6 @@ class Config:
             self.ROLLOUT_A_IDX = self.N_GRID // 2
         if self.ROLLOUT_OMEGA_IDX is None:
             self.ROLLOUT_OMEGA_IDX = self.N_GRID // 2
-
 
 def set_seeds(cfg: Config) -> None:
     torch.manual_seed(cfg.SEED)
@@ -414,7 +413,6 @@ def train_model(modele, train_loader, X_val, y_val, FIELDS, PF_SAMPLES, input_fi
 
     historique_train, historique_val, historique_pf = [], [], []
     meilleure_val = float("inf")
-
 
     t0 = time.perf_counter()
     for epoch in range(1, cfg.N_EPOCHS + 1):

@@ -2,12 +2,12 @@
 #SBATCH --job-name=commun
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=48
-#SBATCH --mem=72G
-#SBATCH --time=1-00:00:00
+#SBATCH --cpus-per-task=32
+#SBATCH --mem=48G
+#SBATCH --time=5:59:00
 #SBATCH --output=logs/%x_%j.log
 #SBATCH --error=logs/%x_%j.err
-#SBATCH --partition=long
+#SBATCH --partition=short
 
 set -uo pipefail   # pas de -e : on attend toutes les méthodes même si l'une échoue
 
