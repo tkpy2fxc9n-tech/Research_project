@@ -12,7 +12,7 @@
 set -uo pipefail   # pas de -e : une variante qui plante ne doit pas empêcher
                     # les autres de tourner ni l'agrégation d'être tentée
 
-cd /home/aph25/Code_suppression_hautes_frequences
+cd /home/aph25/recherche/suppression_hautes_frequences
 
 PYTHON=/home/aph25/Desktop/wave_env/bin/python
 

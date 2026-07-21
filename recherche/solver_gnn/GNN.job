@@ -11,7 +11,7 @@
 
 set -uo pipefail
 
-cd /home/aph25/Code_gnn_pde_solver
+cd /home/aph25/recherche/solver_gnn
 mkdir -p logs
 find logs -maxdepth 1 -type f ! -name "*${SLURM_JOB_ID}*" -delete
 

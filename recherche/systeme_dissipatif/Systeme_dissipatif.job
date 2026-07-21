@@ -17,7 +17,7 @@ export OPENBLAS_NUM_THREADS="${SLURM_CPUS_PER_TASK}"
 export NUMEXPR_NUM_THREADS="${SLURM_CPUS_PER_TASK}"
 export VECLIB_MAXIMUM_THREADS="${SLURM_CPUS_PER_TASK}"
 
-cd /home/aph25/Code_systeme_dissipatif
+cd /home/aph25/recherche/systeme_dissipatif
 
 PYTHON=/home/aph25/Desktop/wave_env/bin/python
 

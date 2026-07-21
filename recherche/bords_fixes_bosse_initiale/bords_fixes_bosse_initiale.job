@@ -15,7 +15,7 @@ export OPENBLAS_NUM_THREADS=1
 export NUMEXPR_NUM_THREADS=1
 export VECLIB_MAXIMUM_THREADS=1
 
-cd /home/aph25/Code_bords_fixes_bosse_initiale
+cd /home/aph25/recherche/bords_fixes_bosse_initiale
 mkdir -p logs
 # Nettoie les logs des runs précédents (sans toucher à ceux du job en cours,
 # déjà ouverts par Slurm au lancement).

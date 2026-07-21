@@ -36,7 +36,7 @@ export OPENBLAS_NUM_THREADS=1
 export NUMEXPR_NUM_THREADS=1
 export VECLIB_MAXIMUM_THREADS=1
 
-cd /home/aph25/rollout_training_multiple_waves
+cd /home/aph25/recherche/rollout/rollout_training_multiple_waves
 
 PYTHON=/home/aph25/Desktop/wave_env/bin/python
 
