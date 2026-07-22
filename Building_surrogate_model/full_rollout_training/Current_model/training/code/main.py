@@ -4,6 +4,7 @@
 import argparse
 import resource
 import sys
+from datetime import datetime
 from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -18,8 +19,15 @@ import commun as C
 INPUT_FIELDS = ["U", "Ut", "Uxx"]
 METHOD_NAME = "full_rollout_U_Ut_Uxx"
 
-OUTPUT_DIR = SCRIPT_DIR / "outputs"
-OUTPUT_DIR.mkdir(exist_ok=True)
+# code/ est un sous-dossier de Current_model/training/ -- plots/ et logs/
+# sont ses dossiers frères ; model.pth reste au niveau Current_model/.
+TRAINING_DIR = SCRIPT_DIR.parent
+PROJECT_DIR = TRAINING_DIR.parent
+PLOTS_DIR = TRAINING_DIR / "plots"
+# Sous-dossier par run (date + heure, pas juste la date) -- les anciens runs
+# restent donc tous consultables sous plots/, même plusieurs par jour.
+OUTPUT_DIR = PLOTS_DIR / f"simulation_{datetime.now():%d%m%Y_%H%M%S}"
+OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def parse_args():
@@ -69,7 +77,7 @@ def main():
 
     train_result = train_full_rollout(modele, FIELDS, pairs_train, pairs_val, INPUT_FIELDS,
                                        norm_stats, INPUTS, OUTPUTS, cfg, group_size=args.group_size,
-                                       n_epochs=n_epochs, model_path=SCRIPT_DIR / "model.pth",
+                                       n_epochs=n_epochs, model_path=PROJECT_DIR / "model.pth",
                                        tbptt_hops=args.tbptt_hops)
     plot_rollout_training_curve(train_result, OUTPUT_DIR)
 

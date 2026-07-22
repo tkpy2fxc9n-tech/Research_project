@@ -11,6 +11,13 @@
 
 set -euo pipefail
 
+# À lancer depuis training/ (cd Current_model/training && sbatch code/full_rollout_training.job) --
+# logs/ ci-dessus et mkdir -p logs ci-dessous sont donc relatifs à training/,
+# cohérent avec la structure training/{code,logs,plots}. code/ contient
+# main.py (plots -> training/plots/simulation_<jour>/, modèle ->
+# Current_model/model.pth, cf. PLOTS_DIR/PROJECT_DIR dans main.py).
+cd /home/aph25/Building_surrogate_model/full_rollout_training/Current_model/training
+
 # logs/ doit exister AVANT que Slurm ne démarre le job (les chemins
 # --output/--error ci-dessus sont ouverts dès le lancement, avant la
 # première ligne du script) -- déjà créé, mais recréé ici au cas où le
@@ -31,8 +38,6 @@ export OPENBLAS_NUM_THREADS=1
 export NUMEXPR_NUM_THREADS=1
 export VECLIB_MAXIMUM_THREADS=1
 
-cd /home/aph25/recherche/rollout/full_rollout_training
-
 PYTHON=/home/aph25/Desktop/wave_env/bin/python
 
 # 300 epochs x 23 groupes x 17 corrections/groupe (82 hops / tbptt-hops=5)
@@ -44,6 +49,6 @@ PYTHON=/home/aph25/Desktop/wave_env/bin/python
 # multiplier d'autant le temps de calcul (calibré à ~17s/epoch sur la
 # grille complète, cf. échange avec Claude du 20/07/2026 -- réajuster
 # --epochs si un futur changement de config modifie ce temps).
-time "$PYTHON" -u main.py --epochs 300 --tbptt-hops 5 --group-size 4
+time "$PYTHON" -u code/main.py --epochs 300 --tbptt-hops 5 --group-size 4
 
 echo "FULL_ROLLOUT_TRAINING JOB DONE"

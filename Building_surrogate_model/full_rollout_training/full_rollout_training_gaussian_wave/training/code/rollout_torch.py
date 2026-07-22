@@ -11,7 +11,6 @@ import torch
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
 from _commun_path import COMMUN_DIR
-from wave_forcing import u_right_val_multi
 
 sys.path.insert(0, str(COMMUN_DIR))
 import commun as C
@@ -61,7 +60,7 @@ def build_window_torch(history: list[torch.Tensor], input_fields: list[str], cfg
 
 
 def reconstruct_torch(baseline: torch.Tensor, pred_norm: torch.Tensor,
-                       wave_type_list: list[str], A_list: list[float], omega_list: list[float], n_curr: int,
+                       A_list: list[float], omega_list: list[float], n_curr: int,
                        mu_out_t: torch.Tensor, sd_out_t: torch.Tensor,
                        biais_repos_t: torch.Tensor | None, cfg: "C.Config") -> tuple[list[torch.Tensor], list[int]]:
     # baseline : (G, Ntot), état AVANT ce hop -- fixe pour tous les h (ne pas
@@ -84,8 +83,7 @@ def reconstruct_torch(baseline: torch.Tensor, pred_norm: torch.Tensor,
         t = s * cfg.dt
         interior_nodes = baseline[:, nodes] + deltas[:, :, h - 1]  # (G, Nx), valeurs physiques aux noeuds
 
-        right_vals = torch.tensor([u_right_val_multi(wt, A, omega, t)
-                                    for wt, A, omega in zip(wave_type_list, A_list, omega_list)],
+        right_vals = torch.tensor([C.u_right_val(A, omega, t) for A, omega in zip(A_list, omega_list)],
                                    dtype=baseline.dtype)
         right_block = right_vals.unsqueeze(1).expand(G, Ntot - i_right)
 

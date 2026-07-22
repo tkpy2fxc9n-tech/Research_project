@@ -4,6 +4,7 @@
 # nœud + position + (A, omega) diffusés, au lieu du stencil U/Ut/Uxx aplati).
 import argparse
 import sys
+from datetime import datetime
 from pathlib import Path
 
 import torch
@@ -20,8 +21,17 @@ sys.path.insert(0, str(COMMUN_DIR))
 import commun as C
 
 METHOD_NAME = "gnn_mp_pde"
-OUTPUT_DIR = SCRIPT_DIR / "outputs"
-OUTPUT_DIR.mkdir(exist_ok=True)
+# code/ est un sous-dossier de solver_gnn/training/ -- plots/ et logs/ sont
+# ses dossiers frères ; model.pth reste au niveau solver_gnn/ (partagé avec
+# test/, qui le recharge pour évaluer sans ré-entraîner).
+TRAINING_DIR = SCRIPT_DIR.parent
+PROJECT_DIR = TRAINING_DIR.parent
+PLOTS_DIR = TRAINING_DIR / "plots"
+# Sous-dossier par run (date + heure, pas juste la date, pour ne pas écraser
+# les résultats d'un run précédent lancé le même jour) -- les anciens runs
+# restent donc tous consultables sous plots/.
+OUTPUT_DIR = PLOTS_DIR / f"simulation_{datetime.now():%Y%m%d_%H%M%S}"
+OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def parse_args():
@@ -61,8 +71,13 @@ def main():
     print(modele)
     print(f"Paramètres : {sum(p.numel() for p in modele.parameters()):,}")
 
-    train_result = train_gnn(modele, df, samples, pairs_train, pairs_val, INPUTS, OUTPUTS, norm_stats, cfg,
-                              model_path=SCRIPT_DIR / "model.pth")
+    # Comme les méthodes MLP de Code_comparaison_des_inputs : échantillons de
+    # départ pour le pushforward tirés de TOUTES les simulations (FIELDS),
+    # pas seulement du split train (cf. methode_U_Ut_Uxx/main.py).
+    PF_SAMPLES = C.make_pf_samples(FIELDS, cfg)
+
+    train_result = train_gnn(modele, df, samples, pairs_train, pairs_val, INPUTS, OUTPUTS, norm_stats,
+                              FIELDS, PF_SAMPLES, cfg, model_path=PROJECT_DIR / "model.pth")
     C.plot_training_curve(train_result, OUTPUT_DIR)
 
     df_test = df[df["split"] == "test"].reset_index(drop=True)

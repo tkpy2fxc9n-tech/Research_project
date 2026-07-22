@@ -19,7 +19,6 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
 from _commun_path import COMMUN_DIR
 from rollout_torch import build_window_torch, reconstruct_torch
-from wave_forcing import autoregressive_rollout_multi
 
 sys.path.insert(0, str(COMMUN_DIR))
 import commun as C
@@ -45,9 +44,8 @@ def rollout_group_tbptt(modele, group_pairs, FIELDS, input_fields,
     # continue sur l'état PRÉDIT, jamais remis à la vérité terrain).
     nodes = cfg.nodes
     G, Nx = len(group_pairs), len(nodes)
-    wave_type_list = [wt for wt, _, _ in group_pairs]
-    A_list = [A for _, A, _ in group_pairs]
-    omega_list = [omega for _, _, omega in group_pairs]
+    A_list = [A for A, _ in group_pairs]
+    omega_list = [omega for _, omega in group_pairs]
     history_needed = cfg.M_BACK * cfg.ndt
 
     history = []
@@ -65,7 +63,7 @@ def rollout_group_tbptt(modele, group_pairs, FIELDS, input_fields,
         pred_norm = modele(X)  # (G*Nx, N_FWD)
 
         baseline = history[-1]
-        new_states, s_list = reconstruct_torch(baseline, pred_norm, wave_type_list, A_list, omega_list, n,
+        new_states, s_list = reconstruct_torch(baseline, pred_norm, A_list, omega_list, n,
                                                  mu_out_t, sd_out_t, biais_repos_t, cfg)
 
         baseline_nodes = baseline[:, nodes]
@@ -109,10 +107,10 @@ def evaluate_val_rollout(modele, FIELDS, pairs_val, input_fields, norm_stats, IN
     modele.eval()
     errs = []
     with torch.no_grad():
-        for wave_type, A, omega in pairs_val:
-            U_reel = FIELDS[(wave_type, A, omega)]
-            U_pred = autoregressive_rollout_multi(modele, U_reel, input_fields, mu_in, sd_in, mu_out, sd_out,
-                                                    biais_repos, wave_type, A, omega, cfg)
+        for A, omega in pairs_val:
+            U_reel = FIELDS[(A, omega)]
+            U_pred = C._autoregressive_rollout(modele, U_reel, input_fields, mu_in, sd_in, mu_out, sd_out,
+                                                biais_repos, A, omega, cfg)
             errs.append(C.l2_rel(U_pred[:, cfg.nodes], U_reel[:, cfg.nodes]))
     modele.train()
     return float(np.mean(errs))
