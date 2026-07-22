@@ -1,7 +1,7 @@
-# Méthode Ut_Uxx_pf40 : Ut + Uxx en entrée (pipeline partagé dans commun.py), mais
-# avec un pushforward déroulé sur 40 sauts au lieu de 3 -- expérience isolée
-# pour tester si un horizon d'entraînement beaucoup plus long stabilise
-# mieux le rollout complet (54 blocs). Ne modifie pas methode_Ut_Uxx/.
+# Method Ut_Uxx_pf40: Ut + Uxx as input (pipeline shared in commun.py), but with
+# pushforward unrolled over 40 hops instead of 3 -- isolated experiment to
+# test whether a much longer training horizon better stabilizes the full
+# rollout (54 blocks). Does not modify methode_Ut_Uxx/.
 import sys
 from pathlib import Path
 
@@ -17,12 +17,12 @@ OUTPUT_DIR.mkdir(exist_ok=True)
 
 
 def main():
-    cfg = C.Config(PF_HOPS=40)   # seul changement vs methode_Ut_Uxx : tout le reste identique
+    cfg = C.Config(PF_HOPS=40)   # only change vs methode_Ut_Uxx: everything else identical
     C.set_seeds(cfg)
 
-    print(f"=== Méthode {METHOD_NAME} — champs d'entrée : {INPUT_FIELDS} — PF_HOPS={cfg.PF_HOPS} ===")
+    print(f"=== Method {METHOD_NAME} — input fields: {INPUT_FIELDS} — PF_HOPS={cfg.PF_HOPS} ===")
     df, FIELDS, INPUTS, OUTPUTS = C.generate_dataset(INPUT_FIELDS, cfg)
-    print(f"{len(df):,} lignes x {df.shape[1]} colonnes")
+    print(f"{len(df):,} rows x {df.shape[1]} columns")
 
     df, norm_stats = C.split_and_normalize(df, INPUTS, OUTPUTS, cfg)
     train_loader, X_val, y_val = C.make_dataloaders(df, INPUTS, OUTPUTS, norm_stats, cfg)
@@ -62,7 +62,7 @@ def main():
                               bench.nn_time_med, bench.nn_time_std, bench.fd_time_med,
                               train_result.n_params, bench.flops_per_call)
 
-    print(f"Terminé — sorties dans {OUTPUT_DIR}")
+    print(f"Done — outputs in {OUTPUT_DIR}")
 
 
 if __name__ == "__main__":

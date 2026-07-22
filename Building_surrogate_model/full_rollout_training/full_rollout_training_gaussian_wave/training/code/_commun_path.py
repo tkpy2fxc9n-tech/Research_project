@@ -1,6 +1,6 @@
-# Point d'ancrage vers Code_comparaison_des_inputs/commun.py, réutilisé tel
-# quel par ce projet (full_rollout_training n'est pas un sous-dossier de
-# Code_comparaison_des_inputs, donc le chemin doit être absolu).
+# Anchor pointing to Code_comparaison_des_inputs/commun.py, reused as-is by
+# this project (full_rollout_training is not a subfolder of
+# Code_comparaison_des_inputs, so the path must be absolute).
 from pathlib import Path
 
 COMMUN_DIR = Path("/home/aph25/Building_surrogate_model/comparaisons/comparaison_des_inputs")

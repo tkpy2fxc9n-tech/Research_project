@@ -9,7 +9,7 @@
 #SBATCH --error=logs/%x_%j.err
 #SBATCH --partition=short
 
-set -uo pipefail   # pas de -e : on attend toutes les méthodes même si l'une échoue
+set -uo pipefail   # no -e: we wait for all methods even if one fails
 
 export OMP_NUM_THREADS=1
 export MKL_NUM_THREADS=1
@@ -19,12 +19,12 @@ export VECLIB_MAXIMUM_THREADS=1
 
 cd /home/aph25/Building_surrogate_model/comparaisons/comparaison_des_inputs
 mkdir -p logs
-# Nettoie les logs des runs précédents (sans toucher à ceux du job en cours,
-# déjà ouverts par Slurm au lancement).
+# Clean up logs from previous runs (without touching those of the current
+# job, already opened by Slurm at launch).
 find logs -maxdepth 1 -type f ! -name "*${SLURM_JOB_ID}*" -delete
 
 PYTHON=/home/aph25/Desktop/wave_env/bin/python
-# Méthodes suspendues (pas supprimées) -- décommenter pour les relancer.
+# Methods on hold (not deleted) -- uncomment to relaunch them.
 METHODES=(
     # methode_U
     # methode_U_Ut
@@ -35,10 +35,10 @@ METHODES=(
     methode_U_Ut_Uxx_PF40
 )
 
-# cpus partagés entre les méthodes (generate_dataset lit SLURM_CPUS_PER_TASK).
+# cpus shared between methods (generate_dataset reads SLURM_CPUS_PER_TASK).
 N_PER_METHODE=$(( SLURM_CPUS_PER_TASK / ${#METHODES[@]} ))
 
-echo "=== Lancement des ${#METHODES[@]} méthodes en parallèle ($N_PER_METHODE cpus chacune) ==="
+echo "=== Launching ${#METHODES[@]} methods in parallel ($N_PER_METHODE cpus each) ==="
 pids=()
 for methode in "${METHODES[@]}"; do
     (
@@ -51,17 +51,17 @@ done
 fail=0
 for i in "${!pids[@]}"; do
     if ! wait "${pids[$i]}"; then
-        echo "ÉCHEC : ${METHODES[$i]} (voir logs/${METHODES[$i]}_${SLURM_JOB_ID}.err)"
+        echo "FAILED: ${METHODES[$i]} (see logs/${METHODES[$i]}_${SLURM_JOB_ID}.err)"
         fail=1
     fi
 done
 
 if [ "$fail" -ne 0 ]; then
-    echo "Au moins une méthode a échoué -- comparaison non lancée."
+    echo "At least one method failed -- comparison not launched."
     exit 1
 fi
 
-echo "=== Toutes les méthodes ont terminé -- génération des graphes comparatifs ==="
+echo "=== All methods finished -- generating comparison plots ==="
 time "$PYTHON" -u Comparaisons/compare_methodes.py
 
 echo "DONE"

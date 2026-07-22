@@ -1,4 +1,4 @@
-# Méthode U_Ut : U + Ut en entrée (pipeline partagé dans commun.py).
+# Method U_Ut: U + Ut as input (pipeline shared in commun.py).
 import sys
 from pathlib import Path
 
@@ -17,9 +17,9 @@ def main():
     cfg = C.Config()
     C.set_seeds(cfg)
 
-    print(f"=== Méthode {METHOD_NAME} — champs d'entrée : {INPUT_FIELDS} ===")
+    print(f"=== Method {METHOD_NAME} — input fields: {INPUT_FIELDS} ===")
     df, FIELDS, INPUTS, OUTPUTS = C.generate_dataset(INPUT_FIELDS, cfg)
-    print(f"{len(df):,} lignes x {df.shape[1]} colonnes")
+    print(f"{len(df):,} rows x {df.shape[1]} columns")
 
     df, norm_stats = C.split_and_normalize(df, INPUTS, OUTPUTS, cfg)
     train_loader, X_val, y_val = C.make_dataloaders(df, INPUTS, OUTPUTS, norm_stats, cfg)
@@ -59,7 +59,7 @@ def main():
                               bench.nn_time_med, bench.nn_time_std, bench.fd_time_med,
                               train_result.n_params, bench.flops_per_call)
 
-    print(f"Terminé — sorties dans {OUTPUT_DIR}")
+    print(f"Done — outputs in {OUTPUT_DIR}")
 
 
 if __name__ == "__main__":

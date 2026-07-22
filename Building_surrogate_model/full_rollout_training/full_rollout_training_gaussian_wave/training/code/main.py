@@ -1,6 +1,6 @@
-# Point d'entrée : entraînement "full rollout" différentiable, puis
-# réutilisation intégrale (sans modification) des fonctions d'évaluation et
-# de graphiques déjà existantes dans commun.py.
+# Entry point: differentiable "full rollout" training, then full reuse
+# (without modification) of the evaluation and plotting functions already
+# present in commun.py.
 import argparse
 import resource
 import sys
@@ -19,25 +19,25 @@ import commun as C
 INPUT_FIELDS = ["U", "Ut", "Uxx"]
 METHOD_NAME = "full_rollout_U_Ut_Uxx_gaussian_wide"
 
-# code/ est un sous-dossier de full_rollout_training_gaussian_wave/training/ --
-# plots/ et logs/ sont ses dossiers frères ; model.pth et norm_stats.csv
-# restent au niveau full_rollout_training_gaussian_wave/ (cf. Current_model).
+# code/ is a subfolder of full_rollout_training_gaussian_wave/training/ --
+# plots/ and logs/ are its sibling folders; model.pth and norm_stats.csv
+# stay at the full_rollout_training_gaussian_wave/ level (see Current_model).
 TRAINING_DIR = SCRIPT_DIR.parent
 PROJECT_DIR = TRAINING_DIR.parent
 PLOTS_DIR = TRAINING_DIR / "plots"
-# Sous-dossier par run (date + heure, pas juste la date) -- les anciens runs
-# restent donc tous consultables sous plots/, même plusieurs par jour.
+# One subfolder per run (date + time, not just the date) -- older runs
+# therefore all stay browsable under plots/, even several per day.
 OUTPUT_DIR = PLOTS_DIR / f"simulation_{datetime.now():%d%m%Y_%H%M%S}"
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-# Grille élargie (vs Current_model, N_GRID=10 / A:0.005-0.1 / omega:3-10) pour
-# couvrir beaucoup plus de formes d'onde gaussiennes : 20x20 = 400 simulations,
-# amplitude 0.005-0.15, omega 1-10 (= toute la plage physique utile, cf.
-# u_right_val dans commun.py : sigma = interp(omega, [1,10], [0.15,0.07]) --
-# au-delà de omega=10 ou en-deçà de 1, l'interp clampe et n'ajoute aucune
-# largeur d'impulsion supplémentaire). Centralisé ici (plutôt que dupliqué)
-# car test_prediction.py doit reconstruire un Config strictement identique
-# pour que le modèle rechargé reçoive les bonnes features.
+# Widened grid (vs Current_model, N_GRID=10 / A:0.005-0.1 / omega:3-10) to
+# cover many more Gaussian wave shapes: 20x20 = 400 simulations,
+# amplitude 0.005-0.15, omega 1-10 (= the whole physically useful range, see
+# u_right_val in commun.py: sigma = interp(omega, [1,10], [0.15,0.07]) --
+# beyond omega=10 or below 1, the interp clamps and adds no extra pulse
+# width). Centralized here (rather than duplicated) because
+# test_prediction.py must rebuild a strictly identical Config so the
+# reloaded model receives the right features.
 CONFIG_OVERRIDES = dict(
     N_GRID=20,
     AMP_MIN=0.005,
@@ -48,27 +48,27 @@ CONFIG_OVERRIDES = dict(
 
 
 def parse_args():
-    p = argparse.ArgumentParser(description="Entraînement full-rollout différentiable (sans detach).")
+    p = argparse.ArgumentParser(description="Differentiable full-rollout training (no detach).")
     p.add_argument("--smoke-test", action="store_true",
-                    help="Run miniature (grille réduite, peu d'epochs) pour vérifier que tout "
-                         "tourne sans erreur avant un run complet et coûteux.")
+                    help="Miniature run (reduced grid, few epochs) to check that everything "
+                         "runs without error before a full, expensive run.")
     p.add_argument("--epochs", type=int, default=None,
-                    help="Nombre d'epochs (défaut : 2 en --smoke-test, 5 sinon).")
+                    help="Number of epochs (default: 2 in --smoke-test, 5 otherwise).")
     p.add_argument("--group-size", type=int, default=8,
-                    help="Nombre de simulations déroulées en parallèle par mise à jour des poids.")
+                    help="Number of simulations rolled out in parallel per weight update.")
     p.add_argument("--tbptt-hops", type=int, default=10,
-                    help="Nombre de hops déroulés avant chaque correction des poids (coupe le fil du "
-                         "gradient sans jamais remettre l'état à la vérité terrain).")
+                    help="Number of hops rolled out before each weight correction (cuts the "
+                         "gradient thread without ever resetting the state to ground truth).")
     return p.parse_args()
 
 
 def build_config(args, n_epochs):
-    # N_EPOCHS est repassé à Config (bien que train_full_rollout reçoive
-    # n_epochs séparément) uniquement pour que C.export_resume affiche le
-    # bon nombre d'epochs dans resume.txt.
+    # N_EPOCHS is passed back to Config (even though train_full_rollout
+    # receives n_epochs separately) only so that C.export_resume shows the
+    # correct number of epochs in resume.txt.
     kwargs = {"N_EPOCHS": n_epochs, **CONFIG_OVERRIDES}
     if args.smoke_test:
-        kwargs["N_GRID"] = 4  # 16 simulations au lieu de 400 -- suffisant pour vérifier que ça tourne
+        kwargs["N_GRID"] = 4  # 16 simulations instead of 400 -- enough to check it runs
     return C.Config(**kwargs)
 
 
@@ -79,18 +79,18 @@ def main():
     C.set_seeds(cfg)
 
     mode = "SMOKE TEST" if args.smoke_test else "run"
-    print(f"=== full_rollout_training_gaussian_wave [{mode}] — champs d'entrée : {INPUT_FIELDS} — "
-          f"grille {cfg.N_GRID}x{cfg.N_GRID} (A:{cfg.AMP_MIN}-{cfg.AMP_MAX}, omega:{cfg.OMEGA_MIN}-{cfg.OMEGA_MAX}), "
-          f"{n_epochs} epochs, groupes de {args.group_size}, correction toutes les {args.tbptt_hops} hops ===")
+    print(f"=== full_rollout_training_gaussian_wave [{mode}] — input fields: {INPUT_FIELDS} — "
+          f"grid {cfg.N_GRID}x{cfg.N_GRID} (A:{cfg.AMP_MIN}-{cfg.AMP_MAX}, omega:{cfg.OMEGA_MIN}-{cfg.OMEGA_MAX}), "
+          f"{n_epochs} epochs, groups of {args.group_size}, correction every {args.tbptt_hops} hops ===")
 
     df, FIELDS, INPUTS, OUTPUTS = C.generate_dataset(INPUT_FIELDS, cfg)
-    print(f"{len(df):,} lignes x {df.shape[1]} colonnes ({len(FIELDS)} simulations)")
+    print(f"{len(df):,} rows x {df.shape[1]} columns ({len(FIELDS)} simulations)")
 
     df, pairs_train, pairs_val, pairs_test = split_by_simulation(df, cfg)
     norm_stats = compute_norm_stats(df, INPUTS, OUTPUTS, cfg)
-    # Persisté à côté de model.pth (pas dans OUTPUT_DIR, qui change de nom
-    # chaque jour) pour que test_prediction.py retrouve toujours les stats de
-    # normalisation du dernier modèle entraîné, sans régénérer le dataset.
+    # Persisted next to model.pth (not in OUTPUT_DIR, which changes name
+    # every day) so that test_prediction.py always finds the normalization
+    # stats of the last trained model, without regenerating the dataset.
     norm_stats.to_csv(PROJECT_DIR / "norm_stats.csv")
 
     modele = C.Reseau(n_inputs=len(INPUTS), n_outputs=len(OUTPUTS), hidden_sizes=cfg.HIDDEN_SIZES)
@@ -120,9 +120,9 @@ def main():
 
     if args.smoke_test:
         peak_rss_mb = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024
-        print(f"Pic mémoire (smoke test) : {peak_rss_mb:.0f} Mo")
+        print(f"Peak memory (smoke test): {peak_rss_mb:.0f} MB")
 
-    print(f"Terminé — sorties dans {OUTPUT_DIR}")
+    print(f"Done — outputs in {OUTPUT_DIR}")
 
 
 if __name__ == "__main__":

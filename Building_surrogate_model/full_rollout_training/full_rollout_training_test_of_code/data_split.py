@@ -1,7 +1,6 @@
-# Split par SIMULATION complète (couple (A, omega)), pas par ligne comme
-# C.split_and_normalize -- indispensable ici puisqu'on déroule des
-# trajectoires entières (une simulation ne peut pas être coupée entre train
-# et test).
+# Split by full SIMULATION (pair (A, omega)), not by row like
+# C.split_and_normalize -- essential here since we roll out entire
+# trajectories (a simulation cannot be split between train and test).
 import sys
 from itertools import product
 from pathlib import Path
@@ -46,7 +45,7 @@ def split_by_simulation(df: pd.DataFrame, cfg: "C.Config", pin_rollout_pair: boo
     )
     df = df.merge(split_df, on=["A", "omega"], how="left")
 
-    print("Distribution du split (par simulation) :")
+    print("Split distribution (by simulation):")
     for s, pairs in [("train", pairs_train), ("val", pairs_val), ("test", pairs_test)]:
         n = len(pairs)
         print(f"  {s:5s} : {n:>3d} simulations ({100*n/n_total:.1f} %)")

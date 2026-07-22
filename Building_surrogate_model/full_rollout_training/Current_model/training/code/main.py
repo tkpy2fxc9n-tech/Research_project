@@ -1,6 +1,6 @@
-# Point d'entrée : entraînement "full rollout" différentiable, puis
-# réutilisation intégrale (sans modification) des fonctions d'évaluation et
-# de graphiques déjà existantes dans commun.py.
+# Entry point: differentiable "full rollout" training, then full reuse
+# (without modification) of the evaluation and plotting functions already
+# present in commun.py.
 import argparse
 import resource
 import sys
@@ -19,39 +19,39 @@ import commun as C
 INPUT_FIELDS = ["U", "Ut", "Uxx"]
 METHOD_NAME = "full_rollout_U_Ut_Uxx"
 
-# code/ est un sous-dossier de Current_model/training/ -- plots/ et logs/
-# sont ses dossiers frères ; model.pth reste au niveau Current_model/.
+# code/ is a subfolder of Current_model/training/ -- plots/ and logs/
+# are its sibling folders; model.pth stays at the Current_model/ level.
 TRAINING_DIR = SCRIPT_DIR.parent
 PROJECT_DIR = TRAINING_DIR.parent
 PLOTS_DIR = TRAINING_DIR / "plots"
-# Sous-dossier par run (date + heure, pas juste la date) -- les anciens runs
-# restent donc tous consultables sous plots/, même plusieurs par jour.
+# One subfolder per run (date + time, not just the date) -- older runs
+# therefore all stay browsable under plots/, even several per day.
 OUTPUT_DIR = PLOTS_DIR / f"simulation_{datetime.now():%d%m%Y_%H%M%S}"
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def parse_args():
-    p = argparse.ArgumentParser(description="Entraînement full-rollout différentiable (sans detach).")
+    p = argparse.ArgumentParser(description="Differentiable full-rollout training (no detach).")
     p.add_argument("--smoke-test", action="store_true",
-                    help="Run miniature (grille réduite, peu d'epochs) pour vérifier que tout "
-                         "tourne sans erreur avant un run complet et coûteux.")
+                    help="Miniature run (reduced grid, few epochs) to check that everything "
+                         "runs without error before a full, expensive run.")
     p.add_argument("--epochs", type=int, default=None,
-                    help="Nombre d'epochs (défaut : 2 en --smoke-test, 5 sinon).")
+                    help="Number of epochs (default: 2 in --smoke-test, 5 otherwise).")
     p.add_argument("--group-size", type=int, default=8,
-                    help="Nombre de simulations déroulées en parallèle par mise à jour des poids.")
+                    help="Number of simulations rolled out in parallel per weight update.")
     p.add_argument("--tbptt-hops", type=int, default=10,
-                    help="Nombre de hops déroulés avant chaque correction des poids (coupe le fil du "
-                         "gradient sans jamais remettre l'état à la vérité terrain).")
+                    help="Number of hops rolled out before each weight correction (cuts the "
+                         "gradient thread without ever resetting the state to ground truth).")
     return p.parse_args()
 
 
 def build_config(args, n_epochs):
-    # N_EPOCHS est repassé à Config (bien que train_full_rollout reçoive
-    # n_epochs séparément) uniquement pour que C.export_resume affiche le
-    # bon nombre d'epochs dans resume.txt.
+    # N_EPOCHS is passed back to Config (even though train_full_rollout
+    # receives n_epochs separately) only so that C.export_resume shows the
+    # correct number of epochs in resume.txt.
     kwargs = {"N_EPOCHS": n_epochs}
     if args.smoke_test:
-        kwargs["N_GRID"] = 4  # 16 simulations au lieu de 100 -- suffisant pour vérifier que ça tourne
+        kwargs["N_GRID"] = 4  # 16 simulations instead of 100 -- enough to check it runs
     return C.Config(**kwargs)
 
 
@@ -62,12 +62,12 @@ def main():
     C.set_seeds(cfg)
 
     mode = "SMOKE TEST" if args.smoke_test else "run"
-    print(f"=== full_rollout_training [{mode}] — champs d'entrée : {INPUT_FIELDS} — "
-          f"grille {cfg.N_GRID}x{cfg.N_GRID}, {n_epochs} epochs, groupes de {args.group_size}, "
-          f"correction toutes les {args.tbptt_hops} hops ===")
+    print(f"=== full_rollout_training [{mode}] — input fields: {INPUT_FIELDS} — "
+          f"grid {cfg.N_GRID}x{cfg.N_GRID}, {n_epochs} epochs, groups of {args.group_size}, "
+          f"correction every {args.tbptt_hops} hops ===")
 
     df, FIELDS, INPUTS, OUTPUTS = C.generate_dataset(INPUT_FIELDS, cfg)
-    print(f"{len(df):,} lignes x {df.shape[1]} colonnes ({len(FIELDS)} simulations)")
+    print(f"{len(df):,} rows x {df.shape[1]} columns ({len(FIELDS)} simulations)")
 
     df, pairs_train, pairs_val, pairs_test = split_by_simulation(df, cfg)
     norm_stats = compute_norm_stats(df, INPUTS, OUTPUTS, cfg)
@@ -99,9 +99,9 @@ def main():
 
     if args.smoke_test:
         peak_rss_mb = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024
-        print(f"Pic mémoire (smoke test) : {peak_rss_mb:.0f} Mo")
+        print(f"Peak memory (smoke test): {peak_rss_mb:.0f} MB")
 
-    print(f"Terminé — sorties dans {OUTPUT_DIR}")
+    print(f"Done — outputs in {OUTPUT_DIR}")
 
 
 if __name__ == "__main__":

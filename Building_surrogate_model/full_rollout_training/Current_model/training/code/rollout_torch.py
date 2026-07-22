@@ -1,8 +1,8 @@
-# Portage torch (différentiable, sans jamais repasser par numpy) de la
-# physique de reconstruction déjà présente et validée dans
+# Torch port (differentiable, never falling back to numpy) of the
+# reconstruction physics already present and validated in
 # Code_comparaison_des_inputs/commun.py (uxx_field, field_value, build_window,
-# reconstruct). Aucune opération in-place : chaque étape reconstruit un
-# nouveau tenseur, pour ne jamais perturber le chemin de calcul du gradient.
+# reconstruct). No in-place operations: every step rebuilds a new tensor,
+# to never disturb the gradient computation path.
 import sys
 from pathlib import Path
 
@@ -17,7 +17,7 @@ import commun as C
 
 
 def uxx_field_torch(u: torch.Tensor, cfg: "C.Config") -> torch.Tensor:
-    # u : (G, Ntot). Port direct de C.uxx_field.
+    # u : (G, Ntot). Direct port of C.uxx_field.
     i_left, i_right = cfg.i_left, cfg.i_right
     G = u.shape[0]
     interior = (u[:, i_left - 1:i_right] - 2 * u[:, i_left:i_right + 1]
@@ -28,10 +28,10 @@ def uxx_field_torch(u: torch.Tensor, cfg: "C.Config") -> torch.Tensor:
 
 
 def build_window_torch(history: list[torch.Tensor], input_fields: list[str], cfg: "C.Config") -> torch.Tensor:
-    # history : liste de M_BACK+1 tenseurs (G, Ntot), du plus ancien
-    # (history[0]) au plus récent (history[-1] = état courant n).
-    # Retourne X de forme (G*Nx, n_features), même ordre de colonnes que
-    # C.make_feature_columns (lag, puis k, puis champ).
+    # history: list of M_BACK+1 tensors (G, Ntot), from the oldest
+    # (history[0]) to the most recent (history[-1] = current state n).
+    # Returns X of shape (G*Nx, n_features), same column order as
+    # C.make_feature_columns (lag, then k, then field).
     nodes = cfg.nodes
     G = history[-1].shape[0]
     Nx = len(nodes)
@@ -49,7 +49,7 @@ def build_window_torch(history: list[torch.Tensor], input_fields: list[str], cfg
             elif f == "Uxx":
                 field_arrays[f] = uxx_field_torch(u_m, cfg)
             else:
-                raise ValueError(f"Champ d'entrée inconnu : {f!r}")
+                raise ValueError(f"Unknown input field: {f!r}")
         for k in range(-cfg.SS, cfg.SS + 1):
             idx = nodes + k
             for f in input_fields:
@@ -63,10 +63,10 @@ def reconstruct_torch(baseline: torch.Tensor, pred_norm: torch.Tensor,
                        A_list: list[float], omega_list: list[float], n_curr: int,
                        mu_out_t: torch.Tensor, sd_out_t: torch.Tensor,
                        biais_repos_t: torch.Tensor | None, cfg: "C.Config") -> tuple[list[torch.Tensor], list[int]]:
-    # baseline : (G, Ntot), état AVANT ce hop -- fixe pour tous les h (ne pas
-    # chaîner h=1 dans h=2, comme C.reconstruct).
-    # pred_norm : (G*Nx, N_FWD), sortie brute du réseau pour ce hop.
-    # Retourne (liste de N_FWD tenseurs (G, Ntot), liste des indices temporels s correspondants).
+    # baseline: (G, Ntot), state BEFORE this hop -- fixed for all h (don't
+    # chain h=1 into h=2, like C.reconstruct).
+    # pred_norm: (G*Nx, N_FWD), raw network output for this hop.
+    # Returns (list of N_FWD tensors (G, Ntot), list of corresponding time indices s).
     nodes = cfg.nodes
     i_left, i_right, Ntot = cfg.i_left, cfg.i_right, cfg.Ntot
     G = baseline.shape[0]
@@ -81,14 +81,14 @@ def reconstruct_torch(baseline: torch.Tensor, pred_norm: torch.Tensor,
     for h in range(1, cfg.N_FWD + 1):
         s = n_curr + h * cfg.ndt
         t = s * cfg.dt
-        interior_nodes = baseline[:, nodes] + deltas[:, :, h - 1]  # (G, Nx), valeurs physiques aux noeuds
+        interior_nodes = baseline[:, nodes] + deltas[:, :, h - 1]  # (G, Nx), physical values at the nodes
 
         right_vals = torch.tensor([C.u_right_val(A, omega, t) for A, omega in zip(A_list, omega_list)],
                                    dtype=baseline.dtype)
         right_block = right_vals.unsqueeze(1).expand(G, Ntot - i_right)
 
-        # encastrement gauche (indices [0, i_left] inclus, écrase donc aussi
-        # la valeur physique calculée au noeud i_left -- comme C.reconstruct)
+        # left clamping (indices [0, i_left] included, so it also overwrites
+        # the physical value computed at node i_left -- like C.reconstruct)
         left_block = torch.zeros(G, i_left + 1, dtype=baseline.dtype)
         u_full = torch.cat([left_block, interior_nodes[:, 1:], right_block], dim=1)
 

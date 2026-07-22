@@ -11,28 +11,28 @@
 
 set -euo pipefail
 
-# À lancer depuis training/ (cd full_rollout_training_gaussian_wave/training &&
-# sbatch code/full_rollout_training_gaussian_wave.job) -- logs/ ci-dessus et
-# mkdir -p logs ci-dessous sont donc relatifs à training/, cohérent avec la
-# structure training/{code,logs,plots}. code/ contient main.py (plots ->
-# training/plots/simulation_<jour>/, modèle -> full_rollout_training_gaussian_wave/model.pth,
-# cf. PLOTS_DIR/PROJECT_DIR dans main.py).
+# To be launched from training/ (cd full_rollout_training_gaussian_wave/training &&
+# sbatch code/full_rollout_training_gaussian_wave.job) -- logs/ above and
+# mkdir -p logs below are therefore relative to training/, consistent with the
+# training/{code,logs,plots} structure. code/ contains main.py (plots ->
+# training/plots/simulation_<day>/, model -> full_rollout_training_gaussian_wave/model.pth,
+# see PLOTS_DIR/PROJECT_DIR in main.py).
 cd /home/aph25/Building_surrogate_model/full_rollout_training/full_rollout_training_gaussian_wave/training
 
-# logs/ doit exister AVANT que Slurm ne démarre le job (les chemins
-# --output/--error ci-dessus sont ouverts dès le lancement, avant la
-# première ligne du script) -- déjà créé, mais recréé ici au cas où le
-# dossier aurait été supprimé entre deux runs.
+# logs/ must exist BEFORE Slurm starts the job (the --output/--error paths
+# above are opened as soon as it launches, before the first line of the
+# script) -- already created, but recreated here in case the folder was
+# deleted between two runs.
 mkdir -p logs
-# Nettoie les logs des runs précédents (sans toucher à ceux du job en cours,
-# déjà ouverts par Slurm au lancement).
+# Cleans up logs from previous runs (without touching those of the current
+# job, already opened by Slurm at launch).
 find logs -maxdepth 1 -type f ! -name "*${SLURM_JOB_ID}*" -delete
 
-# 1 thread par processus : generate_dataset répartit les simulations FD sur
-# les cpus alloués via ProcessPoolExecutor (comme dans
-# Code_comparaison_des_inputs/commun.job) -- un OMP_NUM_THREADS plus élevé
-# ferait sursouscrire les cpus. L'entraînement lui-même est de toute façon
-# forcé à 1 thread par commun.py (torch.set_num_threads(1)).
+# 1 thread per process: generate_dataset spreads the FD simulations across
+# the allocated cpus via ProcessPoolExecutor (like in
+# Code_comparaison_des_inputs/commun.job) -- a higher OMP_NUM_THREADS would
+# oversubscribe the cpus. Training itself is forced to 1 thread anyway by
+# commun.py (torch.set_num_threads(1)).
 export OMP_NUM_THREADS=1
 export MKL_NUM_THREADS=1
 export OPENBLAS_NUM_THREADS=1
@@ -41,17 +41,17 @@ export VECLIB_MAXIMUM_THREADS=1
 
 PYTHON=/home/aph25/Desktop/wave_env/bin/python
 
-# Mêmes hyperparamètres d'entraînement que Current_model (300 epochs,
-# tbptt-hops=5, group-size=4) -- seule la grille change (main.py:
-# CONFIG_OVERRIDES, N_GRID=20 soit 400 simulations gaussiennes au lieu de
-# 100, A:0.005-0.15, omega:1-10). ~4x plus de paires d'entraînement -> temps
-# et mémoire adaptés ci-dessus en conséquence. Estimation ~5.3-5.8h, donc à
-# la limite des 6h de la partition short (extrapolation linéaire, pas une
-# mesure -- marge d'erreur possible) : si le job est tué avant la fin,
-# model.pth (sauvegardé à chaque epoch qui améliore la validation) et
-# norm_stats.csv (à côté de model.pth) restent exploitables par test_prediction.py, juste
-# avec un modèle moins entraîné que prévu. Repasser en partition medium
-# (--time=10:00:00) si on veut la garantie d'aller au bout des 300 epochs.
+# Same training hyperparameters as Current_model (300 epochs,
+# tbptt-hops=5, group-size=4) -- only the grid changes (main.py:
+# CONFIG_OVERRIDES, N_GRID=20 i.e. 400 Gaussian simulations instead of
+# 100, A:0.005-0.15, omega:1-10). ~4x more training pairs -> time
+# and memory adjusted above accordingly. Estimate ~5.3-5.8h, so at
+# the edge of the 6h short partition limit (linear extrapolation, not a
+# measurement -- margin of error possible): if the job is killed before
+# the end, model.pth (saved at every epoch that improves validation) and
+# norm_stats.csv (next to model.pth) remain usable by test_prediction.py, just
+# with a less trained model than intended. Switch to the medium partition
+# (--time=10:00:00) if you want the guarantee of completing all 300 epochs.
 time "$PYTHON" -u code/main.py --epochs 300 --tbptt-hops 5 --group-size 4
 
 echo "FULL_ROLLOUT_TRAINING_GAUSSIAN_WAVE JOB DONE"

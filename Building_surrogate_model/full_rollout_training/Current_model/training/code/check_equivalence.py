@@ -1,9 +1,9 @@
-# Sanity check à lancer AVANT tout entraînement : vérifie que le portage
-# torch (rollout_torch.py) reproduit fidèlement la physique numpy déjà
-# validée dans commun.py, sur quelques hops et un modèle à poids aléatoires
-# fixes. Ne teste PAS le gradient (juste les valeurs), le but est de
-# détecter une erreur de transcription (ordre de colonnes, conditions aux
-# limites, lissage) avant d'investir du temps de calcul dans un entraînement.
+# Sanity check to run BEFORE any training: verifies that the torch port
+# (rollout_torch.py) faithfully reproduces the numpy physics already
+# validated in commun.py, over a few hops and a model with fixed random
+# weights. Does NOT test the gradient (only the values), the goal is to
+# catch a transcription error (column order, boundary conditions,
+# smoothing) before investing compute time in a training run.
 import sys
 from pathlib import Path
 
@@ -36,9 +36,9 @@ def main():
     modele = C.Reseau(n_inputs=len(INPUTS), n_outputs=len(OUTPUTS), hidden_sizes=cfg.HIDDEN_SIZES)
     modele.eval()
 
-    # Stats de normalisation factices (juste besoin de std != 0) -- ce script
-    # ne teste que la fidélité de la reconstruction physique, pas les vraies
-    # statistiques du dataset.
+    # Fake normalization stats (just need std != 0) -- this script only
+    # tests the fidelity of the physical reconstruction, not the real
+    # dataset statistics.
     mu_in = np.zeros(len(INPUTS), dtype=np.float32)
     sd_in = np.ones(len(INPUTS), dtype=np.float32)
     mu_out = np.zeros(len(OUTPUTS), dtype=np.float32)
@@ -48,7 +48,7 @@ def main():
     history_needed = cfg.M_BACK * cfg.ndt
     n_stop = history_needed + N_HOPS_TEST * cfg.N_FWD * cfg.ndt
 
-    # --- Référence : rollout numpy existant (commun.py), tronqué à N_HOPS_TEST hops ---
+    # --- Reference: existing numpy rollout (commun.py), truncated to N_HOPS_TEST hops ---
     U_ref = np.zeros((cfg.Nt + 1, cfg.Ntot))
     U_ref[:history_needed + 1] = U_reel[:history_needed + 1]
     for n in range(history_needed, n_stop, cfg.N_FWD * cfg.ndt):
@@ -60,7 +60,7 @@ def main():
         for s, u in champs.items():
             U_ref[s] = u
 
-    # --- Version torch (rollout_torch.py), mêmes hops, groupe de taille 1 ---
+    # --- Torch version (rollout_torch.py), same hops, group of size 1 ---
     mu_in_t, sd_in_t = torch.tensor(mu_in), torch.tensor(sd_in)
     mu_out_t, sd_out_t = torch.tensor(mu_out), torch.tensor(sd_out)
     biais_repos_t = torch.tensor(biais_repos)
@@ -80,12 +80,12 @@ def main():
     U_ref_final = U_ref[n_stop]
 
     diff = np.abs(U_torch_final - U_ref_final)
-    print(f"Écart max absolu après {N_HOPS_TEST} hops : {diff.max():.3e}  (tolérance {TOLERANCE:.0e})")
+    print(f"Max absolute gap after {N_HOPS_TEST} hops: {diff.max():.3e}  (tolerance {TOLERANCE:.0e})")
 
     if diff.max() < TOLERANCE:
-        print("OK -- rollout_torch.py est équivalent au rollout numpy de commun.py.")
+        print("OK -- rollout_torch.py is equivalent to the numpy rollout in commun.py.")
     else:
-        print("ÉCHEC -- écart au-delà de la tolérance, vérifier rollout_torch.py avant d'entraîner.")
+        print("FAILED -- gap beyond tolerance, check rollout_torch.py before training.")
         sys.exit(1)
 
 

@@ -11,27 +11,27 @@
 
 set -euo pipefail
 
-# À lancer depuis training/ (cd Current_model/training && sbatch code/full_rollout_training.job) --
-# logs/ ci-dessus et mkdir -p logs ci-dessous sont donc relatifs à training/,
-# cohérent avec la structure training/{code,logs,plots}. code/ contient
-# main.py (plots -> training/plots/simulation_<jour>/, modèle ->
-# Current_model/model.pth, cf. PLOTS_DIR/PROJECT_DIR dans main.py).
+# To be launched from training/ (cd Current_model/training && sbatch code/full_rollout_training.job) --
+# logs/ above and mkdir -p logs below are therefore relative to training/,
+# consistent with the training/{code,logs,plots} structure. code/ contains
+# main.py (plots -> training/plots/simulation_<day>/, model ->
+# Current_model/model.pth, see PLOTS_DIR/PROJECT_DIR in main.py).
 cd /home/aph25/Building_surrogate_model/full_rollout_training/Current_model/training
 
-# logs/ doit exister AVANT que Slurm ne démarre le job (les chemins
-# --output/--error ci-dessus sont ouverts dès le lancement, avant la
-# première ligne du script) -- déjà créé, mais recréé ici au cas où le
-# dossier aurait été supprimé entre deux runs.
+# logs/ must exist BEFORE Slurm starts the job (the --output/--error paths
+# above are opened as soon as it launches, before the first line of the
+# script) -- already created, but recreated here in case the folder was
+# deleted between two runs.
 mkdir -p logs
-# Nettoie les logs des runs précédents (sans toucher à ceux du job en cours,
-# déjà ouverts par Slurm au lancement).
+# Cleans up logs from previous runs (without touching those of the current
+# job, already opened by Slurm at launch).
 find logs -maxdepth 1 -type f ! -name "*${SLURM_JOB_ID}*" -delete
 
-# 1 thread par processus : generate_dataset répartit les 100 simulations FD
-# sur les cpus alloués via ProcessPoolExecutor (comme dans
-# Code_comparaison_des_inputs/commun.job) -- un OMP_NUM_THREADS plus élevé
-# ferait sursouscrire les cpus. L'entraînement lui-même est de toute façon
-# forcé à 1 thread par commun.py (torch.set_num_threads(1)).
+# 1 thread per process: generate_dataset spreads the 100 FD simulations
+# across the allocated cpus via ProcessPoolExecutor (like in
+# Code_comparaison_des_inputs/commun.job) -- a higher OMP_NUM_THREADS would
+# oversubscribe the cpus. Training itself is forced to 1 thread anyway by
+# commun.py (torch.set_num_threads(1)).
 export OMP_NUM_THREADS=1
 export MKL_NUM_THREADS=1
 export OPENBLAS_NUM_THREADS=1
@@ -40,15 +40,15 @@ export VECLIB_MAXIMUM_THREADS=1
 
 PYTHON=/home/aph25/Desktop/wave_env/bin/python
 
-# 300 epochs x 23 groupes x 17 corrections/groupe (82 hops / tbptt-hops=5)
-# = ~117 300 corrections de poids -- volontairement au moins autant que les
-# ~114 620 mises à jour de la méthode pushforward existante (2 934 000
-# lignes train / 512 par batch x 20 epochs), pour ne pas conclure trop tôt
-# faute d'entraînement suffisant. group-size réduit à 4 (au lieu de 8) et
-# tbptt-hops à 5 (au lieu de 10) pour multiplier les corrections sans
-# multiplier d'autant le temps de calcul (calibré à ~17s/epoch sur la
-# grille complète, cf. échange avec Claude du 20/07/2026 -- réajuster
-# --epochs si un futur changement de config modifie ce temps).
+# 300 epochs x 23 groups x 17 corrections/group (82 hops / tbptt-hops=5)
+# = ~117,300 weight corrections -- deliberately at least as many as the
+# ~114,620 updates of the existing pushforward method (2,934,000 train
+# rows / 512 per batch x 20 epochs), to avoid concluding too early from
+# insufficient training. group-size reduced to 4 (instead of 8) and
+# tbptt-hops to 5 (instead of 10) to multiply the corrections without
+# multiplying the compute time as much (calibrated at ~17s/epoch on the
+# full grid, see exchange with Claude on 2026-07-20 -- readjust --epochs
+# if a future config change alters this time).
 time "$PYTHON" -u code/main.py --epochs 300 --tbptt-hops 5 --group-size 4
 
 echo "FULL_ROLLOUT_TRAINING JOB DONE"

@@ -1,18 +1,18 @@
-# Test manuel : pour une impulsion gaussienne (A, omega) choisie à la main,
-# PAS nécessairement vue à l'entraînement (ni même dans la plage AMP/OMEGA du
-# dataset), simule la vérité terrain (résolution FD) et le rollout prédit par
-# le modèle entraîné, puis affiche les deux courbes superposées dans un même
-# gif (cf. commun.make_rollout_animation) + les courbes d'erreur associées.
+# Manual test: for a hand-picked Gaussian pulse (A, omega), NOT necessarily
+# seen during training (nor even within the dataset's AMP/OMEGA range),
+# simulates the ground truth (FD resolution) and the rollout predicted by
+# the trained model, then displays both curves overlaid in the same
+# gif (see commun.make_rollout_animation) + the associated error curves.
 #
-# Rappel physique (cf. u_right_val dans commun.py) : pour une gaussienne,
-# omega ne représente PAS une fréquence mais pilote la largeur de l'impulsion
-# via sigma = interp(omega, [1, 10], [0.15, 0.07]) -- omega grand = impulsion
-# étroite, omega petit = impulsion large.
+# Physical reminder (see u_right_val in commun.py): for a Gaussian, omega
+# does NOT represent a frequency but controls the pulse width via
+# sigma = interp(omega, [1, 10], [0.15, 0.07]) -- large omega = narrow
+# pulse, small omega = wide pulse.
 #
-# Usage le plus simple : modifiez A et OMEGA juste en-dessous, puis
+# Simplest usage: change A and OMEGA just below, then
 #   python test_prediction.py
-# (les flags --A/--omega restent disponibles si vous préférez les passer en
-# ligne de commande -- ils ont alors priorité sur les valeurs ci-dessous).
+# (the --A/--omega flags remain available if you prefer passing them on
+# the command line -- they then take priority over the values below).
 import argparse
 import sys
 from pathlib import Path
@@ -22,11 +22,11 @@ import pandas as pd
 import torch
 
 # ============================================================
-#  PARAMÈTRES À MODIFIER ICI POUR CHANGER LA FORME DE L'ONDE
+#  PARAMETERS TO MODIFY HERE TO CHANGE THE WAVE SHAPE
 # ============================================================
-A = 0.08          # amplitude de l'impulsion gaussienne
-OMEGA = 4.5       # largeur : sigma = interp(omega, [1,10], [0.15,0.07])
-                  # (omega grand -> impulsion étroite, omega petit -> large)
+A = 0.08          # amplitude of the Gaussian pulse
+OMEGA = 4.5       # width: sigma = interp(omega, [1,10], [0.15,0.07])
+                  # (large omega -> narrow pulse, small omega -> wide)
 # ============================================================
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -39,20 +39,20 @@ import commun as C
 
 
 def parse_args():
-    p = argparse.ArgumentParser(description="Teste le modèle entraîné sur une impulsion gaussienne "
-                                             "(A, omega) -- modifiables directement en haut du fichier, "
-                                             "ou via --A/--omega qui ont priorité.")
+    p = argparse.ArgumentParser(description="Tests the trained model on a Gaussian pulse "
+                                             "(A, omega) -- modifiable directly at the top of the file, "
+                                             "or via --A/--omega which take priority.")
     p.add_argument("--A", type=float, default=None,
-                    help=f"Amplitude de l'impulsion gaussienne (défaut : A={A} défini en haut du fichier).")
+                    help=f"Amplitude of the Gaussian pulse (default: A={A} set at the top of the file).")
     p.add_argument("--omega", type=float, default=None,
-                    help=f"Paramètre de largeur, sigma = interp(omega, [1,10], [0.15,0.07]) -- "
-                         f"plus omega est grand, plus l'impulsion est étroite "
-                         f"(défaut : OMEGA={OMEGA} défini en haut du fichier).")
+                    help=f"Width parameter, sigma = interp(omega, [1,10], [0.15,0.07]) -- "
+                         f"the larger omega, the narrower the pulse "
+                         f"(default: OMEGA={OMEGA} set at the top of the file).")
     p.add_argument("--model-path", type=Path, default=PROJECT_DIR / "model.pth")
     p.add_argument("--norm-stats", type=Path, default=PROJECT_DIR / "norm_stats.csv",
-                    help="Stats de normalisation sauvegardées par main.py lors de l'entraînement.")
+                    help="Normalization stats saved by main.py during training.")
     p.add_argument("--output-dir", type=Path, default=None,
-                    help="Défaut : training/plots/test_A{A}_omega{omega}/.")
+                    help="Default: training/plots/test_A{A}_omega{omega}/.")
     args = p.parse_args()
     if args.A is None:
         args.A = A
@@ -65,14 +65,14 @@ def main():
     args = parse_args()
 
     if not args.model_path.exists():
-        sys.exit(f"Modèle introuvable : {args.model_path} -- avez-vous lancé l'entraînement (main.py) ?")
+        sys.exit(f"Model not found: {args.model_path} -- have you run training (main.py)?")
     if not args.norm_stats.exists():
-        sys.exit(f"Stats de normalisation introuvables : {args.norm_stats} -- avez-vous lancé "
-                 f"l'entraînement (main.py) après l'ajout de la sauvegarde norm_stats.csv ?")
+        sys.exit(f"Normalization stats not found: {args.norm_stats} -- have you run "
+                 f"training (main.py) after adding the norm_stats.csv save?")
 
     cfg = C.Config(**CONFIG_OVERRIDES)
     sigma = np.interp(args.omega, [1.0, 10.0], [0.15, 0.07])
-    print(f"=== test manuel — A={args.A}, omega={args.omega} (sigma≈{sigma:.4f}) ===")
+    print(f"=== manual test — A={args.A}, omega={args.omega} (sigma≈{sigma:.4f}) ===")
 
     INPUTS = C.make_feature_columns(INPUT_FIELDS, cfg)
     OUTPUTS = C.make_output_columns(cfg)
@@ -89,10 +89,10 @@ def main():
 
     biais_repos = C._biais_repos(modele, mu_in, sd_in, mu_out, sd_out, cfg)
 
-    print("Simulation FD de référence (vérité terrain)...")
+    print("Reference FD simulation (ground truth)...")
     U_reel = C.run_fd_simulation(args.A, args.omega, cfg)
 
-    print("Rollout autorégressif du modèle...")
+    print("Autoregressive rollout of the model...")
     U_pred = C._autoregressive_rollout(modele, U_reel, INPUT_FIELDS, mu_in, sd_in, mu_out, sd_out,
                                         biais_repos, args.A, args.omega, cfg)
 
@@ -107,10 +107,10 @@ def main():
     C.plot_rollout_error(t_axis, l2_list, linf_list, output_dir)
     C.plot_smape(t_axis, smape_list, output_dir)
 
-    print(f"L2 relative   : finale = {l2_list[-1]:.4e}  |  max = {max(l2_list):.4e}")
-    print(f"Linf absolue  : finale = {linf_list[-1]:.4e}  |  max = {max(linf_list):.4e}")
-    print(f"sMAPE (%)     : finale = {smape_list[-1]:.2f}  |  max = {max(smape_list):.2f}")
-    print(f"Terminé — gif et courbes d'erreur dans {output_dir}")
+    print(f"L2 relative   : final = {l2_list[-1]:.4e}  |  max = {max(l2_list):.4e}")
+    print(f"Linf absolute : final = {linf_list[-1]:.4e}  |  max = {max(linf_list):.4e}")
+    print(f"sMAPE (%)     : final = {smape_list[-1]:.2f}  |  max = {max(smape_list):.2f}")
+    print(f"Done — gif and error curves in {output_dir}")
 
 
 if __name__ == "__main__":

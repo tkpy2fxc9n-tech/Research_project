@@ -1,6 +1,6 @@
-# Logique commune aux 4 méthodes (simulation, entraînement, rollout, export).
-# Chaque methode_*/main.py ne fait que choisir INPUT_FIELDS et appeler ces
-# fonctions, pour garantir que les méthodes ne diffèrent QUE par leurs inputs.
+# Logic shared by the 4 methods (simulation, training, rollout, export).
+# Each methode_*/main.py only chooses INPUT_FIELDS and calls these
+# functions, to guarantee that the methods differ ONLY by their inputs.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -25,8 +25,8 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
 
-# Threads fixés à 1 : les temps d'entraînement/rollout sont comparés entre
-# les 4 méthodes, un thread count variable les rendrait non comparables.
+# Threads fixed to 1: training/rollout times are compared across
+# the 4 methods, a variable thread count would make them non-comparable.
 torch.set_num_threads(1)
 
 FIELD_LABELS = {"U": "u", "Ut": "u_dot", "Uxx": "u_xx"}
@@ -43,7 +43,7 @@ class Config:
     SS: int = 10
     t_end: float = 5
 
-    # M_BACK niveaux passés -> N_FWD horizons futurs, espacés de ndt pas.
+    # M_BACK past levels -> N_FWD future horizons, spaced by ndt steps.
     ndt: int = 3
     M_BACK: int = 2
     N_FWD: int = 2
@@ -54,7 +54,7 @@ class Config:
     OMEGA_MIN: float = 3
     OMEGA_MAX: float = 10
 
-    # None -> centre de la grille (cf __post_init__), pas le coin (A_MIN, OMEGA_MIN).
+    # None -> grid center (see __post_init__), not the corner (A_MIN, OMEGA_MIN).
     ROLLOUT_A_IDX: int | None = None
     ROLLOUT_OMEGA_IDX: int | None = None
 
@@ -67,10 +67,10 @@ class Config:
     LAMBDA_PF: float = 1.0
     N_PF_GROUPS: int = 8
     PF_WARMUP: int = 2
-    PF_HOPS: int = 3   # sauts autorégressifs enchaînés pendant l'entraînement pushforward
+    PF_HOPS: int = 3   # chained autoregressive hops during pushforward training
 
     NOISE_STD: float = 0.10
-    SMOOTH_ALPHA: float = 0.20   # doit rester < 0.25 (stabilité du lissage)
+    SMOOTH_ALPHA: float = 0.20   # must stay < 0.25 (smoothing stability)
 
     SEED: int = 0
     SPLIT_SEED: int = 42
@@ -84,9 +84,9 @@ class Config:
         self.dx = self.L / (self.Nx - 1)
         self.CFL = self.dt / self.dx * np.sqrt(self.E / self.rho)
         if self.CFL > 1:
-            print(f"ATTENTION : CFL={self.CFL:.3f} > 1 -- le schéma explicite est numériquement "
-                  f"instable avec ces Nt/Nx/t_end/L (la simulation va diverger). Augmentez Nt "
-                  f"et/ou réduisez Nx pour revenir à CFL <= 1.")
+            print(f"WARNING: CFL={self.CFL:.3f} > 1 -- the explicit scheme is numerically "
+                  f"unstable with these Nt/Nx/t_end/L (the simulation will diverge). Increase Nt "
+                  f"and/or reduce Nx to bring CFL back to <= 1.")
         self.AMPLITUDES = np.linspace(self.AMP_MIN, self.AMP_MAX, self.N_GRID).round(3).tolist()
         self.PULSATIONS = np.linspace(self.OMEGA_MIN, self.OMEGA_MAX, self.N_GRID).round(1).tolist()
         if self.ROLLOUT_A_IDX is None:
@@ -114,8 +114,8 @@ def u_right_val(A: float, omega: float, t: float) -> float:
 
 
 def run_fd_simulation(A: float, omega: float, cfg: Config) -> np.ndarray:
-    # Grille étendue avec SS points fantômes : bord gauche encastré (=0),
-    # bord droit imposé (continuité constante avec le déplacement forcé).
+    # Extended grid with SS ghost points: left boundary clamped (=0),
+    # right boundary imposed (constant continuity with the forced displacement).
     i_left, i_right, Ntot = cfg.i_left, cfg.i_right, cfg.Ntot
     u_storage = np.zeros((cfg.Nt + 1, Ntot))
     u = np.zeros(Ntot)
@@ -148,7 +148,7 @@ def field_value(field_name: str, get_u, m: int, cfg: Config) -> np.ndarray:
         return (get_u(m) - get_u(m - cfg.ndt)) / (cfg.ndt * cfg.dt)
     if field_name == "Uxx":
         return uxx_field(get_u(m), cfg)
-    raise ValueError(f"Champ d'entrée inconnu : {field_name!r}")
+    raise ValueError(f"Unknown input field: {field_name!r}")
 
 
 def make_feature_columns(input_fields: list[str], cfg: Config) -> list[str]:
@@ -166,7 +166,7 @@ def make_output_columns(cfg: Config) -> list[str]:
 
 
 def build_window(m_list, get_u, input_fields: list[str], cfg: Config) -> np.ndarray:
-    # L'ordre des colonnes doit rester synchronisé avec make_feature_columns.
+    # Column order must stay synchronized with make_feature_columns.
     nodes = cfg.nodes
     n_features = cfg.M_BACK * (2*cfg.SS + 1) * len(input_fields)
     X = np.zeros((len(nodes), n_features), dtype=np.float32)
@@ -180,8 +180,8 @@ def build_window(m_list, get_u, input_fields: list[str], cfg: Config) -> np.ndar
     return X
 
 
-# Chaque (A, omega) est simulé indépendamment : parallélisable sur un pool
-# de process (utilise les cpus alloués par Slurm).
+# Each (A, omega) is simulated independently: parallelizable over a process
+# pool (uses the cpus allocated by Slurm).
 def _n_workers_from_env() -> int:
     slurm_cpus = os.environ.get("SLURM_CPUS_PER_TASK")
     if slurm_cpus:
@@ -241,8 +241,8 @@ def generate_dataset(input_fields: list[str], cfg: Config, n_workers: int | None
     return df, FIELDS, INPUTS, OUTPUTS
 
 
-# Normalisation appliquée à la volée (pas de colonnes normalisées dans df)
-# pour limiter le pic mémoire.
+# Normalization applied on the fly (no normalized columns in df)
+# to limit the memory peak.
 def split_and_normalize(df: pd.DataFrame, INPUTS, OUTPUTS, cfg: Config):
     rng = np.random.default_rng(seed=cfg.SPLIT_SEED)
 
@@ -257,10 +257,10 @@ def split_and_normalize(df: pd.DataFrame, INPUTS, OUTPUTS, cfg: Config):
     df = df.copy()
     df["split"] = split_labels
 
-    print("Distribution du split :")
+    print("Split distribution:")
     for s in ["train", "val", "test"]:
         n = (df["split"] == s).sum()
-        print(f"  {s:5s} : {n:>8,} lignes  ({100*n/len(df):.1f} %)")
+        print(f"  {s:5s} : {n:>8,} rows  ({100*n/len(df):.1f} %)")
 
     train_mask = df["split"] == "train"
     cols = INPUTS + OUTPUTS
@@ -310,9 +310,9 @@ class Reseau(nn.Module):
         return self.reseau(x)
 
 
-# Pushforward (Brandstetter et al. 2022) : corrige le distribution shift du
-# rollout autorégressif en entraînant aussi sur ses propres prédictions
-# (gradient détaché), pas seulement sur des entrées propres (teacher forcing).
+# Pushforward (Brandstetter et al. 2022): corrects the distribution shift of
+# the autoregressive rollout by also training on its own predictions
+# (detached gradient), not just on clean inputs (teacher forcing).
 def make_pf_samples(FIELDS: dict, cfg: Config) -> list[tuple]:
     return [
         (A, omega, n)
@@ -348,9 +348,9 @@ def pushforward_loss(modele, FIELDS, PF_SAMPLES, input_fields, mu_in, sd_in, mu_
     groups = [PF_SAMPLES[i] for i in idxs]
     nN = len(cfg.nodes)
 
-    # PF_HOPS sauts autorégressifs enchaînés (gradient détaché sauf le
-    # dernier) : chaque saut prédit à partir de SA PROPRE reconstruction du
-    # saut précédent, pas des données réelles -- comme en rollout complet.
+    # PF_HOPS chained autoregressive hops (gradient detached except the
+    # last one): each hop predicts from ITS OWN reconstruction of the
+    # previous hop, not from real data -- like in a full rollout.
     field_at = [(lambda m, U=FIELDS[(A, omega)]: U[m]) for (A, omega, n) in groups]
     n_curr = [n for (A, omega, n) in groups]
     baseline = [FIELDS[(A, omega)][n] for (A, omega, n) in groups]
@@ -472,7 +472,7 @@ def train_model(modele, train_loader, X_val, y_val, FIELDS, PF_SAMPLES, input_fi
     train_time_s = time.perf_counter() - t0
 
     modele.load_state_dict(torch.load(model_path, weights_only=True))
-    print(f"Meilleur modèle rechargé — val minimale : {meilleure_val:.6f}")
+    print(f"Best model reloaded — minimum val: {meilleure_val:.6f}")
 
     n_params = sum(p.numel() for p in modele.parameters())
     return TrainResult(historique_train, historique_val, historique_pf, meilleure_val, train_time_s, n_params)
@@ -484,7 +484,7 @@ def plot_training_curve(result: TrainResult, output_dir: Path):
     ax.plot(result.historique_val, label="Data (val)")
     ax.plot(result.historique_pf, label="Pushforward")
     ax.set_xlabel("Epoch"); ax.set_ylabel("Loss")
-    ax.set_title("Courbe d'apprentissage (pushforward)")
+    ax.set_title("Learning curve (pushforward)")
     ax.set_yscale("log"); ax.legend(); ax.grid(True)
     plt.tight_layout()
     plt.savefig(output_dir / "courbe_apprentissage.png", dpi=150, bbox_inches="tight")
@@ -511,9 +511,9 @@ def evaluate_teacher_forcing(modele, df_test: pd.DataFrame, INPUTS, OUTPUTS, nor
         y_r, y_p = y_true[:, i], y_pred[:, i]
         ax.scatter(y_r, y_p, alpha=0.4, s=8)
         lim = max(abs(y_r).max(), abs(y_p).max())
-        ax.plot([-lim, lim], [-lim, lim], "r--", lw=1, label="prédiction parfaite")
-        ax.set_xlabel(f"{col} réel (physique)")
-        ax.set_ylabel(f"{col} prédit (physique)")
+        ax.plot([-lim, lim], [-lim, lim], "r--", lw=1, label="perfect prediction")
+        ax.set_xlabel(f"{col} real (physical)")
+        ax.set_ylabel(f"{col} predicted (physical)")
 
         mse_norm = ((y_pred_n[:, i] - y_true_n[:, i]) ** 2).mean()
         r2 = 1 - mse_norm / y_true_n[:, i].var()
@@ -522,7 +522,7 @@ def evaluate_teacher_forcing(modele, df_test: pd.DataFrame, INPUTS, OUTPUTS, nor
         ax.legend(); ax.grid(True)
         metrics[col] = {"mse_norm": float(mse_norm), "r2": float(r2)}
 
-    fig.suptitle("Test sur toutes les données test du dataset", fontsize=14)
+    fig.suptitle("Test over the full test split of the dataset", fontsize=14)
     plt.tight_layout()
     plt.savefig(output_dir / "test_predictions.png", dpi=150, bbox_inches="tight")
     plt.close()
@@ -538,8 +538,8 @@ class RolloutResult:
 
 
 def _biais_repos(modele, mu_in, sd_in, mu_out, sd_out, cfg: Config):
-    # Sortie réseau pour une entrée nulle, soustraite au rollout pour que la
-    # zone au repos reste à 0.
+    # Network output for a zero input, subtracted from the rollout so the
+    # resting zone stays at 0.
     Xz = (np.zeros((len(cfg.nodes), len(mu_in)), dtype=np.float32) - mu_in) / sd_in
     with torch.no_grad():
         return (modele(torch.tensor(Xz)).numpy() * sd_out + mu_out)[0]
@@ -547,9 +547,9 @@ def _biais_repos(modele, mu_in, sd_in, mu_out, sd_out, cfg: Config):
 
 def _autoregressive_rollout(modele, U_reel, input_fields, mu_in, sd_in, mu_out, sd_out,
                              biais_repos, A, omega, cfg: Config) -> np.ndarray:
-    # Réutilisée par run_rollout et le benchmark. Les M_BACK*ndt premiers pas
-    # viennent de U_reel (historique nécessaire avant la 1re prédiction),
-    # au-delà le champ est généré de façon autorégressive par le réseau.
+    # Reused by run_rollout and the benchmark. The first M_BACK*ndt steps
+    # come from U_reel (history needed before the 1st prediction),
+    # beyond that the field is generated autoregressively by the network.
     history_needed = cfg.M_BACK * cfg.ndt
     U = np.zeros((cfg.Nt + 1, cfg.Ntot))
     for m in range(history_needed + 1):
@@ -569,7 +569,7 @@ def _autoregressive_rollout(modele, U_reel, input_fields, mu_in, sd_in, mu_out, 
             U[s, cfg.i_right:] = u_right_val(A, omega, s*cfg.dt)
 
             if cfg.SMOOTH_ALPHA > 0:
-                # Lissage laplacien : atténue le bruit haute fréquence sans amortir l'onde.
+                # Laplacian smoothing: attenuates high-frequency noise without damping the wave.
                 j0, j1 = cfg.i_left + 1, cfg.i_right
                 lap = U[s, j0-1:j1-1] - 2*U[s, j0:j1] + U[s, j0+1:j1+1]
                 U[s, j0:j1] += cfg.SMOOTH_ALPHA * lap
@@ -615,11 +615,11 @@ def compute_errors(rollout: RolloutResult, cfg: Config):
 
 def plot_rollout_error(t_axis, l2_list, linf_list, output_dir: Path):
     plt.figure(figsize=(9, 5))
-    plt.plot(t_axis, l2_list, "o-", ms=3, label="erreur L2 relative")
-    plt.plot(t_axis, linf_list, "s-", ms=3, label="erreur max absolue (Linf)")
+    plt.plot(t_axis, l2_list, "o-", ms=3, label="relative L2 error")
+    plt.plot(t_axis, linf_list, "s-", ms=3, label="max absolute error (Linf)")
     plt.yscale("log")
-    plt.xlabel("t"); plt.ylabel("erreur"); plt.grid(True, which="both"); plt.legend()
-    plt.title("Erreur du rollout en fonction du temps")
+    plt.xlabel("t"); plt.ylabel("error"); plt.grid(True, which="both"); plt.legend()
+    plt.title("Rollout error over time")
     plt.savefig(output_dir / "erreur_temps.png", dpi=150, bbox_inches="tight")
     plt.close()
 
@@ -627,8 +627,8 @@ def plot_rollout_error(t_axis, l2_list, linf_list, output_dir: Path):
 def plot_smape(t_axis, smape_list, output_dir: Path):
     plt.figure(figsize=(9, 5))
     plt.plot(t_axis, smape_list, "s-", ms=3, label="sMAPE")
-    plt.xlabel("t"); plt.ylabel("erreur (%)"); plt.grid(True); plt.legend()
-    plt.title("sMAPE du rollout en fonction du temps")
+    plt.xlabel("t"); plt.ylabel("error (%)"); plt.grid(True); plt.legend()
+    plt.title("Rollout sMAPE over time")
     plt.savefig(output_dir / "smape_temps.png", dpi=150, bbox_inches="tight")
     plt.close()
 
@@ -641,16 +641,16 @@ def make_rollout_animation(rollout: RolloutResult, cfg: Config, output_dir: Path
 
     fig_anim, (axA, axB) = plt.subplots(2, 1, figsize=(9, 7), sharex=True)
 
-    ligne_reel, = axA.plot([], [], "r", lw=2, label="réel")
-    ligne_pred, = axA.plot([], [], "b--", lw=2, label="prédit")
+    ligne_reel, = axA.plot([], [], "r", lw=2, label="real")
+    ligne_pred, = axA.plot([], [], "b--", lw=2, label="predicted")
     ymax = np.abs(U_reel[:, nodes]).max() * 1.2
     axA.set_xlim(0, cfg.L); axA.set_ylim(-ymax, ymax)
     axA.set_ylabel("u"); axA.legend(loc="upper right"); axA.grid(True)
 
-    ligne_err, = axB.plot([], [], "k", lw=1.5, label="|prédit - réel|")
+    ligne_err, = axB.plot([], [], "k", lw=1.5, label="|predicted - real|")
     err_max = max(np.max([np.abs(U[m, nodes] - U_reel[m, nodes]).max() for m in frames]) * 1.2, 1e-9)
     axB.set_xlim(0, cfg.L); axB.set_ylim(0, err_max)
-    axB.set_xlabel("x"); axB.set_ylabel("erreur absolue"); axB.legend(loc="upper right"); axB.grid(True)
+    axB.set_xlabel("x"); axB.set_ylabel("absolute error"); axB.legend(loc="upper right"); axB.grid(True)
 
     titre = fig_anim.suptitle("")
 
@@ -658,7 +658,7 @@ def make_rollout_animation(rollout: RolloutResult, cfg: Config, output_dir: Path
         ligne_reel.set_data(x, U_reel[m, nodes])
         ligne_pred.set_data(x, U[m, nodes])
         ligne_err.set_data(x, np.abs(U[m, nodes] - U_reel[m, nodes]))
-        titre.set_text(f"Propagation de l'onde — t = {m*cfg.dt:.3f}  (pas {m})")
+        titre.set_text(f"Wave propagation — t = {m*cfg.dt:.3f}  (step {m})")
         return ligne_reel, ligne_pred, ligne_err, titre
 
     anim = animation.FuncAnimation(fig_anim, maj, frames=frames, interval=50, blit=False)
@@ -667,7 +667,7 @@ def make_rollout_animation(rollout: RolloutResult, cfg: Config, output_dir: Path
 
 
 def plot_utt_uxx(rollout: RolloutResult, cfg: Config, output_dir: Path):
-    # Vérification EDP : u_tt en fonction de u_xx, réel puis prédit.
+    # PDE check: u_tt as a function of u_xx, real then predicted.
     U, U_reel = rollout.U, rollout.U_reel
     i_left, i_right = cfg.i_left, cfg.i_right
     dt, dx, ndt, Nt, Ntot = cfg.dt, cfg.dx, cfg.ndt, cfg.Nt, cfg.Ntot
@@ -682,9 +682,9 @@ def plot_utt_uxx(rollout: RolloutResult, cfg: Config, output_dir: Path):
     plt.figure()
     for n in snaps_reel:
         plt.scatter(ureel_xx[n, i_left+1:i_right], ureel_tt[n, i_left+1:i_right], s=10, label=f"n = {n}")
-    plt.xlabel("u_xx (réel)"); plt.ylabel("u_tt (réel)")
+    plt.xlabel("u_xx (real)"); plt.ylabel("u_tt (real)")
     plt.legend(); plt.grid(); plt.xlim(-10, 10); plt.ylim(-10, 10)
-    plt.title("u_tt en fonction de u_xx (real)")
+    plt.title("u_tt as a function of u_xx (real)")
     plt.savefig(output_dir / "utt_uxx_reel.png", dpi=150, bbox_inches="tight")
     plt.close()
 
@@ -699,9 +699,9 @@ def plot_utt_uxx(rollout: RolloutResult, cfg: Config, output_dir: Path):
     plt.figure()
     for n in snaps_pred:
         plt.scatter(upred_xx[n, i_left+1:i_right], upred_tt[n, i_left+1:i_right], s=10, label=f"n = {n}")
-    plt.xlabel("u_xx (predit)"); plt.ylabel("u_tt (predit)")
+    plt.xlabel("u_xx (predicted)"); plt.ylabel("u_tt (predicted)")
     plt.grid(); plt.xlim(-10, 10); plt.ylim(-10, 10); plt.legend()
-    plt.title("u_tt en fonction de u_xx (prediction)")
+    plt.title("u_tt as a function of u_xx (prediction)")
     plt.savefig(output_dir / "utt_uxx_predit.png", dpi=150, bbox_inches="tight")
     plt.close()
 
@@ -756,9 +756,9 @@ def benchmark_inference(modele, FIELDS, input_fields, norm_stats, INPUTS, OUTPUT
         modele(torch.zeros((len(cfg.nodes), n_features)))
     flops_per_call = fc.get_total_flops() * n_calls
 
-    print(f"FD (réel)   : {fd_med*1e3:7.3f} ms")
+    print(f"FD (real)   : {fd_med*1e3:7.3f} ms")
     print(f"NN (rollout): {nn_med*1e3:7.3f} ms  (±{nn_std*1e3:.3f})")
-    print(f"speedup FD/NN = {fd_med/nn_med:.2f}x   (>1 = le réseau est plus rapide)")
+    print(f"speedup FD/NN = {fd_med/nn_med:.2f}x   (>1 = the network is faster)")
 
     return BenchmarkResult(
         fd_time_med=fd_med, fd_time_std=float(fd_std),
@@ -776,43 +776,43 @@ def export_resume(output_dir: Path, cfg: Config, method_name: str, df: pd.DataFr
     smape_final, smape_max = smape_list[-1], max(smape_list)
 
     with open(output_dir / "resume.txt", "w") as f:
-        f.write("=====  RESUME DU RUN  =====\n\n")
-        f.write(f"Methode         : {method_name}\n\n")
+        f.write("=====  RUN SUMMARY  =====\n\n")
+        f.write(f"Method          : {method_name}\n\n")
 
         f.write("--- Configuration ---\n")
-        f.write(f"Grille          : Nt={cfg.Nt}, Nx={cfg.Nx}, SS={cfg.SS}, ndt={cfg.ndt}\n")
+        f.write(f"Grid            : Nt={cfg.Nt}, Nx={cfg.Nx}, SS={cfg.SS}, ndt={cfg.ndt}\n")
         f.write(f"M / N           : M_BACK={cfg.M_BACK}, N_FWD={cfg.N_FWD}\n")
         f.write(f"Rollout (A,w)   : A={rollout.A}, omega={rollout.omega}\n")
-        f.write(f"Dataset         : {len(df):,} lignes\n")
-        f.write(f"Features        : {len(INPUTS)} entrees, {len(OUTPUTS)} sortie(s)\n")
+        f.write(f"Dataset         : {len(df):,} rows\n")
+        f.write(f"Features        : {len(INPUTS)} inputs, {len(OUTPUTS)} output(s)\n")
         for s in ["train", "val", "test"]:
             n = (df["split"] == s).sum()
-            f.write(f"  split {s:5s}   : {n:>8,} lignes ({100*n/len(df):.1f} %)\n")
-        f.write(f"Parametres NN   : {train_result.n_params:,}\n\n")
+            f.write(f"  split {s:5s}   : {n:>8,} rows ({100*n/len(df):.1f} %)\n")
+        f.write(f"NN parameters   : {train_result.n_params:,}\n\n")
 
-        f.write("--- Entrainement ---\n")
-        f.write(f"Val minimale    : {train_result.meilleure_val:.6e}\n")
+        f.write("--- Training ---\n")
+        f.write(f"Minimum val     : {train_result.meilleure_val:.6e}\n")
         for col, m in tf_metrics.items():
             f.write(f"{col:15s} : MSE (norm) = {m['mse_norm']:.4e} | R2 = {m['r2']:.4f}\n")
         f.write("\n")
 
-        f.write("--- Temps d'execution ---\n")
-        f.write(f"Entrainement ({cfg.N_EPOCHS} epochs)     : {train_result.train_time_s:.3f} s\n")
-        f.write(f"Simulation reelle (FD, mediane)      : {bench.fd_time_med*1e3:.3f} ms\n")
-        f.write(f"Rollout predit (NN, mediane)         : {bench.nn_time_med*1e3:.3f} ms  (+/-{bench.nn_time_std*1e3:.3f})\n")
+        f.write("--- Execution time ---\n")
+        f.write(f"Training ({cfg.N_EPOCHS} epochs)         : {train_result.train_time_s:.3f} s\n")
+        f.write(f"Real simulation (FD, median)         : {bench.fd_time_med*1e3:.3f} ms\n")
+        f.write(f"Predicted rollout (NN, median)       : {bench.nn_time_med*1e3:.3f} ms  (+/-{bench.nn_time_std*1e3:.3f})\n")
         f.write(f"Speedup FD/NN                        : {bench.fd_time_med/bench.nn_time_med:.2f}\n")
-        f.write(f"FLOPs reseau (rollout complet)        : {bench.flops_per_call:,.0f}\n\n")
+        f.write(f"Network FLOPs (full rollout)          : {bench.flops_per_call:,.0f}\n\n")
 
-        f.write("--- Erreurs du rollout ---\n")
-        f.write(f"L2 relative  : finale = {l2_final:.4e}  |  max = {l2_max:.4e}\n")
-        f.write(f"Linf absolue : finale = {linf_final:.4e}  |  max = {linf_max:.4e}\n")
-        f.write(f"sMAPE (%)    : finale = {smape_final:.3f}  |  max = {smape_max:.3f}\n")
+        f.write("--- Rollout errors ---\n")
+        f.write(f"L2 relative  : final = {l2_final:.4e}  |  max = {l2_max:.4e}\n")
+        f.write(f"Linf absolute: final = {linf_final:.4e}  |  max = {linf_max:.4e}\n")
+        f.write(f"sMAPE (%)    : final = {smape_final:.3f}  |  max = {smape_max:.3f}\n")
 
-    print(f"Resume sauvegarde : {output_dir / 'resume.txt'}")
+    print(f"Summary saved: {output_dir / 'resume.txt'}")
 
 
-# Écritures concurrentes possibles (méthodes en parallèle) : flock sérialise
-# le load/modifie/save de comparative_table.xlsx entre les process.
+# Concurrent writes possible (methods running in parallel): flock serializes
+# the load/modify/save of comparative_table.xlsx across processes.
 @contextmanager
 def _xlsx_lock(xlsx_path: Path):
     lock_path = xlsx_path.with_suffix(xlsx_path.suffix + ".lock")
@@ -840,8 +840,8 @@ def export_errors_to_xlsx(xlsx_path: Path, method_name: str, t_axis, l2_list):
             ws.cell(row=1, column=col_time, value="t")
             ws.cell(row=1, column=col_err, value=method_name)
 
-        # Efface l'existant avant d'écrire (évite les lignes fantômes d'un
-        # run précédent qui aurait produit plus de points).
+        # Clears existing content before writing (avoids ghost rows from a
+        # previous run that produced more points).
         for row in range(2, ws.max_row + 1):
             ws.cell(row=row, column=col_time, value=None)
             ws.cell(row=row, column=col_err, value=None)
@@ -851,7 +851,7 @@ def export_errors_to_xlsx(xlsx_path: Path, method_name: str, t_axis, l2_list):
             ws.cell(row=i, column=col_err, value=float(e))
 
         wb.save(xlsx_path)
-    print(f"{len(l2_list)} valeurs écrites dans {xlsx_path} (colonnes t / {method_name}).")
+    print(f"{len(l2_list)} values written to {xlsx_path} (columns t / {method_name}).")
 
 
 def export_timings_to_xlsx(xlsx_path: Path, method_name: str, train_time_s: float,
@@ -883,4 +883,4 @@ def export_timings_to_xlsx(xlsx_path: Path, method_name: str, train_time_s: floa
             ws.cell(row=target_row, column=col, value=val)
 
         wb.save(xlsx_path)
-    print(f"Temps écrits dans {xlsx_path} (feuille Timings, méthode {method_name}).")
+    print(f"Timings written to {xlsx_path} (sheet Timings, method {method_name}).")
