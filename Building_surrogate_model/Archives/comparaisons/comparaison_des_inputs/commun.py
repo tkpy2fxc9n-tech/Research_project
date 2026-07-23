@@ -884,3 +884,407 @@ def export_timings_to_xlsx(xlsx_path: Path, method_name: str, train_time_s: floa
 
         wb.save(xlsx_path)
     print(f"Timings written to {xlsx_path} (sheet Timings, method {method_name}).")
+
+
+# ============================================================================
+# Generalized boundary conditions (arbitrary Dirichlet/Neumann, either end,
+# many families of prescribed movement) -- added for
+# Model_in_tests/full_rollout_training_general_bc. Purely additive: nothing
+# above this line is modified, so every other project importing this module
+# (still using u_right_val/run_fd_simulation/reconstruct/_autoregressive_rollout
+# with the fixed left=0/right=Gaussian-pulse physics) is unaffected.
+#
+# A boundary condition is (bc_type, waveform_family, params):
+#   bc_type in {"dirichlet", "neumann"} -- Dirichlet prescribes a displacement,
+#     Neumann prescribes a slope/flux (0 = a true free end).
+#   waveform_family is a key into BC_WAVEFORMS below.
+#   params is a dict of that family's sampled numeric parameters.
+# The same waveform library is reused for both bc_type and both sides: a
+# Dirichlet value and a Neumann flux are both "just some function of time",
+# so one shared library of shapes covers both roles.
+# ============================================================================
+BCSpec = tuple  # (bc_type: str, waveform_family: str, params: dict)
+
+BC_TYPES = ("dirichlet", "neumann")
+
+
+def sample_gaussian_params(rng, cfg: Config) -> dict:
+    return {
+        "A": float(rng.uniform(cfg.AMP_MIN, cfg.AMP_MAX)),
+        "omega": float(rng.uniform(cfg.OMEGA_MIN, cfg.OMEGA_MAX)),
+    }
+
+
+def gaussian_value(p: dict, t: float) -> float:
+    # Same formula as u_right_val -- a single bump, centered so it has mostly
+    # risen to zero by t=0 (t0 = 4*sigma puts the peak a few sigma in).
+    sigma = np.interp(p["omega"], [1.0, 10.0], [0.15, 0.07])
+    t0 = 4.0 * sigma
+    return p["A"] * np.exp(-((t - t0) / sigma) ** 2)
+
+
+def sample_sinusoid_params(rng, cfg: Config) -> dict:
+    return {
+        "A": float(rng.uniform(cfg.AMP_MIN, cfg.AMP_MAX)),
+        "omega": float(rng.uniform(cfg.OMEGA_MIN, cfg.OMEGA_MAX)),
+        "phase": float(rng.uniform(0.0, 2 * np.pi)),
+    }
+
+
+def sinusoid_value(p: dict, t: float) -> float:
+    # Steady back-and-forth vibration -- unlike the Gaussian, this keeps
+    # driving the boundary for the whole simulation, not just a single bump.
+    return p["A"] * np.sin(p["omega"] * t + p["phase"])
+
+
+def sample_step_params(rng, cfg: Config) -> dict:
+    return {
+        "A": float(rng.uniform(cfg.AMP_MIN, cfg.AMP_MAX)),
+        "t_onset": float(rng.uniform(0.0, 0.3 * cfg.t_end)),
+    }
+
+
+def step_value(p: dict, t: float) -> float:
+    # A sudden jolt that then holds -- tests the network on a step response,
+    # qualitatively different from any smooth pulse/oscillation.
+    return p["A"] if t >= p["t_onset"] else 0.0
+
+
+def sample_ramp_params(rng, cfg: Config) -> dict:
+    return {
+        "A": float(rng.uniform(cfg.AMP_MIN, cfg.AMP_MAX)),
+        "duration": float(rng.uniform(0.1 * cfg.t_end, 0.5 * cfg.t_end)),
+    }
+
+
+def ramp_value(p: dict, t: float) -> float:
+    # A gradual, steady push up to amplitude A over `duration`, then holds.
+    return p["A"] * min(t / p["duration"], 1.0)
+
+
+def sample_multitone_params(rng, cfg: Config) -> dict:
+    # An unpredictable wiggle: a handful of random sine waves added together,
+    # instead of a single clean frequency -- the closest of these families to
+    # "arbitrary" movement without being literally unconstrained noise.
+    n_tones = int(rng.integers(2, 5))
+    return {
+        "A": rng.uniform(cfg.AMP_MIN, cfg.AMP_MAX, size=n_tones).tolist(),
+        "omega": rng.uniform(cfg.OMEGA_MIN, cfg.OMEGA_MAX, size=n_tones).tolist(),
+        "phase": rng.uniform(0.0, 2 * np.pi, size=n_tones).tolist(),
+    }
+
+
+def multitone_value(p: dict, t: float) -> float:
+    tones = zip(p["A"], p["omega"], p["phase"])
+    return sum(A * np.sin(om * t + ph) for A, om, ph in tones) / len(p["A"])
+
+
+def sample_rest_params(rng, cfg: Config) -> dict:
+    return {}
+
+
+def rest_value(p: dict, t: float) -> float:
+    # Nothing happens -- a baseline case (equivalent to amplitude 0).
+    return 0.0
+
+
+BC_WAVEFORMS = {
+    "gaussian": (sample_gaussian_params, gaussian_value),
+    "sinusoid": (sample_sinusoid_params, sinusoid_value),
+    "step": (sample_step_params, step_value),
+    "ramp": (sample_ramp_params, ramp_value),
+    "random_multitone": (sample_multitone_params, multitone_value),
+    "rest": (sample_rest_params, rest_value),
+}
+
+
+def sample_boundary_condition(rng, cfg: Config) -> BCSpec:
+    bc_type = rng.choice(BC_TYPES)
+    family = rng.choice(list(BC_WAVEFORMS.keys()))
+    sampler, _ = BC_WAVEFORMS[family]
+    return (bc_type, family, sampler(rng, cfg))
+
+
+def bc_value(bc: BCSpec, t: float) -> float:
+    _, family, params = bc
+    _, value_fn = BC_WAVEFORMS[family]
+    return value_fn(params, t)
+
+
+def sample_bc_pairs(cfg: Config, n_samples: int, rng=None) -> list[tuple[BCSpec, BCSpec]]:
+    rng = rng if rng is not None else np.random.default_rng(cfg.SEED)
+    return [(sample_boundary_condition(rng, cfg), sample_boundary_condition(rng, cfg))
+            for _ in range(n_samples)]
+
+
+def apply_boundary(u: np.ndarray, side: str, bc_type: str, value: float, cfg: Config) -> np.ndarray:
+    # Dirichlet: fill the whole ghost band + boundary node with `value`,
+    # exactly like the existing fixed-BC code (u_new[:i_left+1]=.../
+    # u_new[i_right:]=...) -- unchanged behavior for that branch.
+    #
+    # Neumann: mirror the ghost band across the boundary with a linear
+    # correction so the central-difference slope estimate at the boundary
+    # equals `value` (0 -> true free end, reflects without flipping sign).
+    # Deliberately does NOT overwrite the boundary node itself: the interior
+    # leapfrog stencil already computes a value there using exactly one ghost
+    # neighbor, so as long as that neighbor is correctly mirrored, the
+    # boundary node comes out right on its own -- overwriting it too (like
+    # Dirichlet does) would double-impose a condition that isn't a prescribed
+    # value here, only a prescribed slope.
+    i_left, i_right, SS, dx = cfg.i_left, cfg.i_right, cfg.SS, cfg.dx
+    if side == "left":
+        if bc_type == "dirichlet":
+            u[:i_left + 1] = value
+        else:
+            for k in range(1, SS + 1):
+                u[i_left - k] = u[i_left + k] - 2 * k * dx * value
+    else:
+        if bc_type == "dirichlet":
+            u[i_right:] = value
+        else:
+            for k in range(1, SS):  # SS-1 pure ghost points beyond i_right
+                u[i_right + k] = u[i_right - k] + 2 * k * dx * value
+    return u
+
+
+def apply_boundary_conditions(u: np.ndarray, t: float, bc_left: BCSpec, bc_right: BCSpec, cfg: Config) -> np.ndarray:
+    apply_boundary(u, "left", bc_left[0], bc_value(bc_left, t), cfg)
+    apply_boundary(u, "right", bc_right[0], bc_value(bc_right, t), cfg)
+    return u
+
+
+def run_fd_simulation_general(bc_left: BCSpec, bc_right: BCSpec, cfg: Config) -> np.ndarray:
+    # Same leapfrog scheme as run_fd_simulation, ghost-fill via the shared
+    # apply_boundary_conditions helper instead of the two hardcoded lines.
+    i_left, i_right, Ntot = cfg.i_left, cfg.i_right, cfg.Ntot
+    u_storage = np.zeros((cfg.Nt + 1, Ntot))
+    u = np.zeros(Ntot)
+    u_1 = np.zeros(Ntot)
+    for n in range(cfg.Nt):
+        t = n * cfg.dt
+        u_new = np.zeros(Ntot)
+        u_new[i_left:i_right+1] = (
+            2.0 * u[i_left:i_right+1] - u_1[i_left:i_right+1]
+            + cfg.CFL**2 * (u[i_left-1:i_right] - 2.0*u[i_left:i_right+1] + u[i_left+1:i_right+2])
+        )
+        apply_boundary_conditions(u_new, t + cfg.dt, bc_left, bc_right, cfg)
+        u_1, u = u.copy(), u_new
+        u_storage[n+1] = u.copy()
+    return u_storage
+
+
+def _simulate_one_general(args):
+    idx, bc_left, bc_right, input_fields, cfg, INPUTS, OUTPUTS = args
+    u_storage = run_fd_simulation_general(bc_left, bc_right, cfg)
+    nodes = cfg.nodes
+    n_list = list(range(cfg.M_BACK*cfg.ndt, cfg.Nt - cfg.N_FWD*cfg.ndt + 1))
+
+    X = np.zeros((len(n_list), len(nodes), len(INPUTS)), dtype=np.float32)
+    Y = np.zeros((len(n_list), len(nodes), len(OUTPUTS)), dtype=np.float32)
+    for i, n in enumerate(n_list):
+        m_list = [n - lag*cfg.ndt for lag in range(cfg.M_BACK)]
+        X[i] = build_window(m_list, lambda m: u_storage[m], input_fields, cfg)
+        for h in range(1, cfg.N_FWD + 1):
+            Y[i, :, h-1] = u_storage[n + h*cfg.ndt, nodes] - u_storage[n, nodes]
+
+    meta = pd.DataFrame({"sim_idx": idx, "n_step": n_list})
+    df_sim = pd.concat([
+        meta.reset_index(drop=True),
+        pd.DataFrame(X.reshape(-1, len(INPUTS)), columns=INPUTS),
+        pd.DataFrame(Y.reshape(-1, len(OUTPUTS)), columns=OUTPUTS),
+    ], axis=1)
+    return idx, u_storage, df_sim
+
+
+def generate_dataset_general(input_fields: list[str], cfg: Config, bc_pairs: list[tuple[BCSpec, BCSpec]],
+                              n_workers: int | None = None):
+    # Same parallelization pattern as generate_dataset, threaded through a
+    # list of (left_bc, right_bc) pairs (random sample, not a dense grid)
+    # instead of product(AMPLITUDES, PULSATIONS). FIELDS/df are keyed by
+    # simulation index (bc dicts aren't hashable, unlike a plain (A,omega) tuple).
+    INPUTS = make_feature_columns(input_fields, cfg)
+    OUTPUTS = make_output_columns(cfg)
+
+    tasks = [(idx, left, right, input_fields, cfg, INPUTS, OUTPUTS)
+             for idx, (left, right) in enumerate(bc_pairs)]
+    n_workers = n_workers or min(len(tasks), _n_workers_from_env())
+
+    FIELDS = {}
+    dfs = []
+    if n_workers > 1:
+        with ProcessPoolExecutor(max_workers=n_workers) as ex:
+            for idx, u_storage, df_sim in ex.map(_simulate_one_general, tasks):
+                FIELDS[idx] = u_storage
+                dfs.append(df_sim)
+    else:
+        for task in tasks:
+            idx, u_storage, df_sim = _simulate_one_general(task)
+            FIELDS[idx] = u_storage
+            dfs.append(df_sim)
+
+    df = pd.concat(dfs, ignore_index=True)
+    return df, FIELDS, INPUTS, OUTPUTS
+
+
+def reconstruct_general(u_curr, n_curr, pred_norm, bc_left: BCSpec, bc_right: BCSpec, mu_out, sd_out,
+                         cfg: Config, biais_repos: np.ndarray | None = None) -> dict:
+    # Numpy counterpart of reconstruct, generalized -- used as the reference
+    # implementation by check_equivalence.py.
+    deltas = pred_norm * sd_out + mu_out
+    if biais_repos is not None:
+        deltas = deltas - biais_repos
+    nodes = cfg.nodes
+    champs = {}
+    for h in range(1, cfg.N_FWD + 1):
+        s = n_curr + h * cfg.ndt
+        t = s * cfg.dt
+        u = np.zeros(cfg.Ntot)
+        u[nodes] = u_curr[nodes] + deltas[:, h-1]
+        apply_boundary_conditions(u, t, bc_left, bc_right, cfg)
+        if cfg.SMOOTH_ALPHA > 0:
+            j0, j1 = cfg.i_left + 1, cfg.i_right
+            lap = u[j0-1:j1-1] - 2*u[j0:j1] + u[j0+1:j1+1]
+            u[j0:j1] += cfg.SMOOTH_ALPHA * lap
+        champs[s] = u
+    return champs
+
+
+def _autoregressive_rollout_general(modele, U_reel, input_fields, mu_in, sd_in, mu_out, sd_out,
+                                     biais_repos, bc_left: BCSpec, bc_right: BCSpec, cfg: Config) -> np.ndarray:
+    history_needed = cfg.M_BACK * cfg.ndt
+    U = np.zeros((cfg.Nt + 1, cfg.Ntot))
+    for m in range(history_needed + 1):
+        U[m] = U_reel[m]
+
+    for n in range(history_needed, cfg.Nt - cfg.N_FWD*cfg.ndt + 1, cfg.N_FWD*cfg.ndt):
+        m_list = [n - lag*cfg.ndt for lag in range(cfg.M_BACK)]
+        X = (build_window(m_list, lambda m: U[m], input_fields, cfg) - mu_in) / sd_in
+        with torch.no_grad():
+            sortie = modele(torch.tensor(X)).numpy()
+        deltas = sortie * sd_out + mu_out - biais_repos
+
+        for h in range(1, cfg.N_FWD + 1):
+            s = n + h*cfg.ndt
+            t = s * cfg.dt
+            U[s, cfg.nodes] = U[n, cfg.nodes] + deltas[:, h-1]
+            apply_boundary_conditions(U[s], t, bc_left, bc_right, cfg)
+
+            if cfg.SMOOTH_ALPHA > 0:
+                j0, j1 = cfg.i_left + 1, cfg.i_right
+                lap = U[s, j0-1:j1-1] - 2*U[s, j0:j1] + U[s, j0+1:j1+1]
+                U[s, j0:j1] += cfg.SMOOTH_ALPHA * lap
+
+    return U
+
+
+@dataclass
+class RolloutResultGeneral:
+    U: np.ndarray
+    U_reel: np.ndarray
+    left_bc: "BCSpec"
+    right_bc: "BCSpec"
+
+
+def run_rollout_general(modele, FIELDS: dict, bc_pairs: list[tuple[BCSpec, BCSpec]], rollout_idx: int,
+                         input_fields, norm_stats, INPUTS, OUTPUTS, cfg: Config) -> RolloutResultGeneral:
+    left_bc, right_bc = bc_pairs[rollout_idx]
+    U_reel = FIELDS[rollout_idx]
+
+    mu_in = norm_stats.loc[INPUTS, "mean"].values.astype(np.float32)
+    sd_in = norm_stats.loc[INPUTS, "std"].values.astype(np.float32)
+    mu_out = norm_stats.loc[OUTPUTS, "mean"].values.astype(np.float32)
+    sd_out = norm_stats.loc[OUTPUTS, "std"].values.astype(np.float32)
+
+    biais_repos = _biais_repos(modele, mu_in, sd_in, mu_out, sd_out, cfg)
+    U = _autoregressive_rollout_general(modele, U_reel, input_fields, mu_in, sd_in, mu_out, sd_out,
+                                         biais_repos, left_bc, right_bc, cfg)
+    return RolloutResultGeneral(U=U, U_reel=U_reel, left_bc=left_bc, right_bc=right_bc)
+
+
+def bc_describe(bc: BCSpec) -> str:
+    bc_type, family, params = bc
+    param_str = ", ".join(f"{k}={v}" for k, v in params.items())
+    return f"{bc_type}/{family}({param_str})"
+
+
+def benchmark_inference_general(modele, FIELDS, input_fields, norm_stats, INPUTS, OUTPUTS,
+                                 rollout: RolloutResultGeneral, cfg: Config) -> BenchmarkResult:
+    left_bc, right_bc, U_reel = rollout.left_bc, rollout.right_bc, rollout.U_reel
+
+    mu_in = norm_stats.loc[INPUTS, "mean"].values.astype(np.float32)
+    sd_in = norm_stats.loc[INPUTS, "std"].values.astype(np.float32)
+    mu_out = norm_stats.loc[OUTPUTS, "mean"].values.astype(np.float32)
+    sd_out = norm_stats.loc[OUTPUTS, "std"].values.astype(np.float32)
+    biais_repos = _biais_repos(modele, mu_in, sd_in, mu_out, sd_out, cfg)
+
+    def fd_once():
+        return run_fd_simulation_general(left_bc, right_bc, cfg)
+
+    def rollout_once():
+        return _autoregressive_rollout_general(modele, U_reel, input_fields, mu_in, sd_in, mu_out, sd_out,
+                                                biais_repos, left_bc, right_bc, cfg)
+
+    fd_mean, fd_std, fd_med = chrono(fd_once)
+    nn_mean, nn_std, nn_med = chrono(rollout_once)
+
+    n_calls = len(range(cfg.M_BACK*cfg.ndt, cfg.Nt - cfg.N_FWD*cfg.ndt + 1, cfg.N_FWD*cfg.ndt))
+    n_features = cfg.M_BACK * (2*cfg.SS + 1) * len(input_fields)
+
+    from torch.utils.flop_counter import FlopCounterMode
+    with FlopCounterMode(display=False) as fc:
+        modele(torch.zeros((len(cfg.nodes), n_features)))
+    flops_per_call = fc.get_total_flops() * n_calls
+
+    print(f"FD (real)   : {fd_med*1e3:7.3f} ms")
+    print(f"NN (rollout): {nn_med*1e3:7.3f} ms  (±{nn_std*1e3:.3f})")
+    print(f"speedup FD/NN = {fd_med/nn_med:.2f}x   (>1 = the network is faster)")
+
+    return BenchmarkResult(
+        fd_time_med=fd_med, fd_time_std=float(fd_std),
+        nn_time_med=nn_med, nn_time_std=float(nn_std),
+        flops_per_call=flops_per_call, n_calls=n_calls,
+    )
+
+
+def export_resume_general(output_dir: Path, cfg: Config, method_name: str, df: pd.DataFrame, INPUTS, OUTPUTS,
+                           train_result: TrainResult, tf_metrics: dict, rollout: RolloutResultGeneral,
+                           bench: BenchmarkResult, errors):
+    t_axis, l2_list, linf_list, smape_list = errors
+    l2_final, l2_max = l2_list[-1], max(l2_list)
+    linf_final, linf_max = linf_list[-1], max(linf_list)
+    smape_final, smape_max = smape_list[-1], max(smape_list)
+
+    with open(output_dir / "resume.txt", "w") as f:
+        f.write("=====  RUN SUMMARY  =====\n\n")
+        f.write(f"Method          : {method_name}\n\n")
+
+        f.write("--- Configuration ---\n")
+        f.write(f"Grid            : Nt={cfg.Nt}, Nx={cfg.Nx}, SS={cfg.SS}, ndt={cfg.ndt}\n")
+        f.write(f"M / N           : M_BACK={cfg.M_BACK}, N_FWD={cfg.N_FWD}\n")
+        f.write(f"Rollout BC      : left={bc_describe(rollout.left_bc)}  right={bc_describe(rollout.right_bc)}\n")
+        f.write(f"Dataset         : {len(df):,} rows\n")
+        f.write(f"Features        : {len(INPUTS)} inputs, {len(OUTPUTS)} output(s)\n")
+        for s in ["train", "val", "test"]:
+            n = (df["split"] == s).sum()
+            f.write(f"  split {s:5s}   : {n:>8,} rows ({100*n/len(df):.1f} %)\n")
+        f.write(f"NN parameters   : {train_result.n_params:,}\n\n")
+
+        f.write("--- Training ---\n")
+        f.write(f"Minimum val     : {train_result.meilleure_val:.6e}\n")
+        for col, m in tf_metrics.items():
+            f.write(f"{col:15s} : MSE (norm) = {m['mse_norm']:.4e} | R2 = {m['r2']:.4f}\n")
+        f.write("\n")
+
+        f.write("--- Execution time ---\n")
+        f.write(f"Training ({cfg.N_EPOCHS} epochs)         : {train_result.train_time_s:.3f} s\n")
+        f.write(f"Real simulation (FD, median)         : {bench.fd_time_med*1e3:.3f} ms\n")
+        f.write(f"Predicted rollout (NN, median)       : {bench.nn_time_med*1e3:.3f} ms  (+/-{bench.nn_time_std*1e3:.3f})\n")
+        f.write(f"Speedup FD/NN                        : {bench.fd_time_med/bench.nn_time_med:.2f}\n")
+        f.write(f"Network FLOPs (full rollout)          : {bench.flops_per_call:,.0f}\n\n")
+
+        f.write("--- Rollout errors ---\n")
+        f.write(f"L2 relative  : final = {l2_final:.4e}  |  max = {l2_max:.4e}\n")
+        f.write(f"Linf absolute: final = {linf_final:.4e}  |  max = {linf_max:.4e}\n")
+        f.write(f"sMAPE (%)    : final = {smape_final:.3f}  |  max = {smape_max:.3f}\n")
+
+    print(f"Summary saved: {output_dir / 'resume.txt'}")
