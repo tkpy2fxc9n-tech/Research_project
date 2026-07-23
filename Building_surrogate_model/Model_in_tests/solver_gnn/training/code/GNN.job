@@ -8,7 +8,7 @@
 #SBATCH --output=logs/%x_%j.log
 #SBATCH --error=logs/%x_%j.err
 #SBATCH --partition=short
-#SBATCH --chdir=/home/aph25/Building_surrogate_model/solver_gnn/training
+#SBATCH --chdir=/home/aph25/Building_surrogate_model/Model_in_tests/solver_gnn/training
 
 set -uo pipefail
 
@@ -16,7 +16,7 @@ set -uo pipefail
 # ci-dessus se résout) AVANT même le démarrage du script -- sbatch peut donc
 # être lancé depuis training/ OU training/code/ sans que les logs se
 # retrouvent au mauvais endroit (ambiguïté corrigée le 22/07/2026).
-cd /home/aph25/Building_surrogate_model/solver_gnn/training
+cd /home/aph25/Building_surrogate_model/Model_in_tests/solver_gnn/training
 mkdir -p logs
 find logs -maxdepth 1 -type f ! -name "*${SLURM_JOB_ID}*" -delete
 

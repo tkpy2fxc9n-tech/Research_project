@@ -11,13 +11,13 @@
 
 set -euo pipefail
 
-# To be launched from training/ (cd full_rollout_training_gaussian_wave/training &&
+# To be launched from training/ (cd The_surrogate_model/full_rollout_training_gaussian_wave/training &&
 # sbatch code/full_rollout_training_gaussian_wave.job) -- logs/ above and
 # mkdir -p logs below are therefore relative to training/, consistent with the
 # training/{code,logs,plots} structure. code/ contains main.py (plots ->
 # training/plots/simulation_<day>/, model -> full_rollout_training_gaussian_wave/model.pth,
 # see PLOTS_DIR/PROJECT_DIR in main.py).
-cd /home/aph25/Building_surrogate_model/full_rollout_training/full_rollout_training_gaussian_wave/training
+cd /home/aph25/Building_surrogate_model/The_surrogate_model/full_rollout_training_gaussian_wave/training
 
 # logs/ must exist BEFORE Slurm starts the job (the --output/--error paths
 # above are opened as soon as it launches, before the first line of the

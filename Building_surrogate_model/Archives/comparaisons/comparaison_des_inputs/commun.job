@@ -17,7 +17,7 @@ export OPENBLAS_NUM_THREADS=1
 export NUMEXPR_NUM_THREADS=1
 export VECLIB_MAXIMUM_THREADS=1
 
-cd /home/aph25/Building_surrogate_model/comparaisons/comparaison_des_inputs
+cd /home/aph25/Building_surrogate_model/Archives/comparaisons/comparaison_des_inputs
 mkdir -p logs
 # Clean up logs from previous runs (without touching those of the current
 # job, already opened by Slurm at launch).

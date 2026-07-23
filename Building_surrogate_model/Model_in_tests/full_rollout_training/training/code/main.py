@@ -17,11 +17,10 @@ sys.path.insert(0, str(COMMUN_DIR))
 import commun as C
 
 INPUT_FIELDS = ["U", "Ut", "Uxx"]
-METHOD_NAME = "full_rollout_U_Ut_Uxx_gaussian_wide"
+METHOD_NAME = "full_rollout_U_Ut_Uxx"
 
-# code/ is a subfolder of full_rollout_training_gaussian_wave/training/ --
-# plots/ and logs/ are its sibling folders; model.pth and norm_stats.csv
-# stay at the full_rollout_training_gaussian_wave/ level (see Current_model).
+# code/ is a subfolder of full_rollout_training/training/ -- plots/ and logs/
+# are its sibling folders; model.pth stays at the full_rollout_training/ level.
 TRAINING_DIR = SCRIPT_DIR.parent
 PROJECT_DIR = TRAINING_DIR.parent
 PLOTS_DIR = TRAINING_DIR / "plots"
@@ -29,22 +28,6 @@ PLOTS_DIR = TRAINING_DIR / "plots"
 # therefore all stay browsable under plots/, even several per day.
 OUTPUT_DIR = PLOTS_DIR / f"simulation_{datetime.now():%d%m%Y_%H%M%S}"
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-
-# Widened grid (vs Current_model, N_GRID=10 / A:0.005-0.1 / omega:3-10) to
-# cover many more Gaussian wave shapes: 20x20 = 400 simulations,
-# amplitude 0.005-0.15, omega 1-10 (= the whole physically useful range, see
-# u_right_val in commun.py: sigma = interp(omega, [1,10], [0.15,0.07]) --
-# beyond omega=10 or below 1, the interp clamps and adds no extra pulse
-# width). Centralized here (rather than duplicated) because
-# test_prediction.py must rebuild a strictly identical Config so the
-# reloaded model receives the right features.
-CONFIG_OVERRIDES = dict(
-    N_GRID=20,
-    AMP_MIN=0.005,
-    AMP_MAX=0.15,
-    OMEGA_MIN=1.0,
-    OMEGA_MAX=10.0,
-)
 
 
 def parse_args():
@@ -66,9 +49,9 @@ def build_config(args, n_epochs):
     # N_EPOCHS is passed back to Config (even though train_full_rollout
     # receives n_epochs separately) only so that C.export_resume shows the
     # correct number of epochs in resume.txt.
-    kwargs = {"N_EPOCHS": n_epochs, **CONFIG_OVERRIDES}
+    kwargs = {"N_EPOCHS": n_epochs}
     if args.smoke_test:
-        kwargs["N_GRID"] = 4  # 16 simulations instead of 400 -- enough to check it runs
+        kwargs["N_GRID"] = 4  # 16 simulations instead of 100 -- enough to check it runs
     return C.Config(**kwargs)
 
 
@@ -79,19 +62,15 @@ def main():
     C.set_seeds(cfg)
 
     mode = "SMOKE TEST" if args.smoke_test else "run"
-    print(f"=== full_rollout_training_gaussian_wave [{mode}] — input fields: {INPUT_FIELDS} — "
-          f"grid {cfg.N_GRID}x{cfg.N_GRID} (A:{cfg.AMP_MIN}-{cfg.AMP_MAX}, omega:{cfg.OMEGA_MIN}-{cfg.OMEGA_MAX}), "
-          f"{n_epochs} epochs, groups of {args.group_size}, correction every {args.tbptt_hops} hops ===")
+    print(f"=== full_rollout_training [{mode}] — input fields: {INPUT_FIELDS} — "
+          f"grid {cfg.N_GRID}x{cfg.N_GRID}, {n_epochs} epochs, groups of {args.group_size}, "
+          f"correction every {args.tbptt_hops} hops ===")
 
     df, FIELDS, INPUTS, OUTPUTS = C.generate_dataset(INPUT_FIELDS, cfg)
     print(f"{len(df):,} rows x {df.shape[1]} columns ({len(FIELDS)} simulations)")
 
     df, pairs_train, pairs_val, pairs_test = split_by_simulation(df, cfg)
     norm_stats = compute_norm_stats(df, INPUTS, OUTPUTS, cfg)
-    # Persisted next to model.pth (not in OUTPUT_DIR, which changes name
-    # every day) so that test_prediction.py always finds the normalization
-    # stats of the last trained model, without regenerating the dataset.
-    norm_stats.to_csv(PROJECT_DIR / "norm_stats.csv")
 
     modele = C.Reseau(n_inputs=len(INPUTS), n_outputs=len(OUTPUTS), hidden_sizes=cfg.HIDDEN_SIZES)
     print(modele)
