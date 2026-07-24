@@ -1,6 +1,5 @@
-# Anchor pointing to Code_comparaison_des_inputs/commun.py, reused as-is by
-# this project (full_rollout_training is not a subfolder of
-# Code_comparaison_des_inputs, so the path must be absolute).
+# Anchor pointing to commun.py, vendored locally (training/code/commun.py)
+# so this project has no dependency outside Beam_surrogate_model/.
 from pathlib import Path
 
-COMMUN_DIR = Path("/home/aph25/Tests_archives/Archives/comparaisons/comparaison_des_inputs")
+COMMUN_DIR = Path(__file__).resolve().parent
