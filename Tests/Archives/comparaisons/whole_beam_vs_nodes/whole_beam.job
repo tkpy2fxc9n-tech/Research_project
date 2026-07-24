@@ -1,0 +1,50 @@
+#!/bin/bash
+#SBATCH --job-name=whole_beam
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=32
+#SBATCH --mem=128G
+#SBATCH --time=5:59:00
+#SBATCH --output=whole_beam_%j.log
+#SBATCH --error=whole_beam_%j.err
+#SBATCH --partition=short
+
+set -euo pipefail
+
+export OMP_NUM_THREADS="${SLURM_CPUS_PER_TASK}"
+export MKL_NUM_THREADS="${SLURM_CPUS_PER_TASK}"
+export OPENBLAS_NUM_THREADS="${SLURM_CPUS_PER_TASK}"
+export NUMEXPR_NUM_THREADS="${SLURM_CPUS_PER_TASK}"
+export VECLIB_MAXIMUM_THREADS="${SLURM_CPUS_PER_TASK}"
+
+# Se place dans le dossier contenant ce script, quel que soit l'endroit
+# d'où `sbatch` est lancé.
+cd "$(dirname "$(readlink -f "$0")")"
+
+# --- Activation de l'environnement conda "wave_env" --------------------
+# (numpy/pandas/torch/matplotlib/openpyxl). À AJUSTER une fois connecté au
+# cluster si le nom du module ou de l'env diffère de ce qui est détecté ici.
+if command -v module >/dev/null 2>&1; then
+    module load anaconda3 2>/dev/null || module load miniconda3 2>/dev/null || true
+fi
+
+CONDA_SH=""
+for base in "$(conda info --base 2>/dev/null || true)" "$HOME/anaconda3" "$HOME/miniconda3" "/opt/anaconda3" "/opt/miniconda3"; do
+    if [ -n "$base" ] && [ -f "$base/etc/profile.d/conda.sh" ]; then
+        CONDA_SH="$base/etc/profile.d/conda.sh"
+        break
+    fi
+done
+if [ -z "$CONDA_SH" ]; then
+    echo "conda.sh introuvable : ajuste le chargement de l'env (module/chemin conda) pour ce cluster." >&2
+    exit 1
+fi
+source "$CONDA_SH"
+conda activate wave_env
+
+# 800 époques / 40 simulations : le run le plus lourd des trois dossiers.
+# Si --time=5:59:00 ne suffit pas sur ce cluster, l'augmenter (ou passer sur
+# une partition longue) une fois la durée réelle observée.
+time python -u "(Uxx, Ut)=>(delta_u) and ndt=5 et N et M.py"
+
+echo "WHOLE_BEAM JOB DONE"

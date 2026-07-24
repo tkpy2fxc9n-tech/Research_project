@@ -1,12 +1,13 @@
-# Split by full SIMULATION, not by row -- keeps a whole trajectory on one
-# side of the split, so the pinned rollout/visualization case is never
-# contaminated by rows the model trained on.
+# Split by full SIMULATION, not by row -- essential here since we roll out
+# entire trajectories (a simulation cannot be split between train and test).
 #
-# Generalized from the single-family gaussian_wave project: simulations
-# there were indexed by a dense (A, omega) grid (product(AMPLITUDES,
+# Generalized from the other full_rollout_training projects: simulations
+# there are indexed by a dense (A, omega) grid (product(AMPLITUDES,
 # PULSATIONS)); here they're indexed by position in a randomly-sampled
-# `bc_pairs` list (see scenarios.sample_scenarios), since a dense grid over
-# {family, params} x 2 independent ends isn't practical.
+# `bc_pairs` list (see commun.sample_bc_pairs), since a dense grid over
+# {type, waveform family, params} x 2 sides isn't practical. The split
+# mechanics (90/5/5 by simulation, one pinned rollout/visualization case)
+# are otherwise unchanged.
 import sys
 from pathlib import Path
 
@@ -15,6 +16,9 @@ import pandas as pd
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
+from _commun_path import COMMUN_DIR
+
+sys.path.insert(0, str(COMMUN_DIR))
 import commun as C
 
 
@@ -31,8 +35,8 @@ def split_by_simulation(bc_pairs: list, df: pd.DataFrame, cfg: "C.Config"):
     idx_test = order[n_train + n_val:].tolist()
 
     # First test-split index is "the" rollout/visualization case (analogous
-    # to pin_rollout_pair in the old grid-based data_split.py, just without a
-    # grid-center index to pin to).
+    # to pin_rollout_pair in the other projects' data_split.py, just without
+    # a grid-center index to pin to).
     rollout_idx = idx_test[0]
 
     split_df = pd.DataFrame(

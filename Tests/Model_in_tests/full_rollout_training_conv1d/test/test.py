@@ -2,13 +2,16 @@
 # boundary condition pair, using the model already trained by
 # ../training/code/main.py.
 #
-# A boundary condition is (bc_type, waveform_family, params) -- bc_type is
-# always "dirichlet" here, waveform_family one of the 5 signal families this
-# project trains on: gaussian, sinusoid, step, ramp, or "rest" (quiet end) --
-# see scenarios.py.
+# A boundary condition is (bc_type, waveform_family, params) -- bc_type in
+# {"dirichlet","neumann"}, waveform_family one of the 7 signal families this
+# project trains on: fourier, sinusoid, chirp, gaussian, shock,
+# filtered_random, or "rest" (homogeneous/free end) -- see
+# training/code/scenarios.py. Only the network construction (ReseauConv,
+# training/code/model.py) is specific to this project -- everything else
+# copied from full_rollout_training_multisignal's make_gif.py.
 #
 # Simplest usage: change LEFT_BC and RIGHT_BC just below, then
-#   python test.py
+#   python make_gif.py
 import sys
 from pathlib import Path
 
@@ -22,10 +25,15 @@ TEST_DIR = Path(__file__).resolve().parent
 PROJECT_DIR = TEST_DIR.parent
 TRAINING_CODE_DIR = PROJECT_DIR / "training" / "code"
 sys.path.insert(0, str(TRAINING_CODE_DIR))
-# Config/INPUT_FIELDS come from config.py (not redefined here) so the
-# rebuilt Config always matches exactly what the saved model was trained with.
-from config import Config, INPUT_FIELDS
-import commun as C
+# INPUT_FIELDS comes from main.py (not redefined here) so the rebuilt Config
+# always matches exactly what the saved model was trained with.
+from main import INPUT_FIELDS
+from model import ReseauConv
+from config import Config
+from waves import bc_describe
+from physics import (make_feature_columns, make_output_columns, run_fd_simulation_general,
+                      autoregressive_rollout, biais_repos as compute_biais_repos)
+from evaluation import RolloutResult
 
 MODEL_PATH = PROJECT_DIR / "model.pth"
 NORM_STATS_PATH = PROJECT_DIR / "norm_stats.csv"
@@ -35,13 +43,13 @@ OUTPUT_DIR = TEST_DIR / "outputs"
 #  PARAMETERS TO MODIFY HERE TO CHANGE THE BOUNDARY CONDITIONS
 # ============================================================
 LEFT_BC = ("dirichlet", "rest", {})
-RIGHT_BC = ("dirichlet", "gaussian", {"A": 0.08, "omega": 4.5})
+RIGHT_BC = ("neumann", "gaussian", {"A": 0.08, "omega": 4.5})
 # ============================================================
 
 
 def bc_filename_tag(bc):
     bc_type, family, _ = bc
-    return f"{bc_type[:1]}-{family}"  # e.g. "d-gaussian", "d-step"
+    return f"{bc_type[:1]}-{family}"  # e.g. "d-gaussian", "n-fourier"
 
 
 def make_relative_error_animation(rollout, cfg, gif_path):
@@ -60,7 +68,7 @@ def make_relative_error_animation(rollout, cfg, gif_path):
 
     ligne_reel, = axA.plot([], [], "r", lw=2, label="real")
     ligne_pred, = axA.plot([], [], "b--", lw=2, label="predicted")
-    amp_ref = max(np.abs(U_reel[:, nodes]).max(), 1e-9)
+    amp_ref = np.abs(U_reel[:, nodes]).max()
     ymax = amp_ref * 1.2
     axA.set_xlim(0, cfg.L); axA.set_ylim(-ymax, ymax)
     axA.set_ylabel("u"); axA.legend(loc="upper right"); axA.grid(True)
@@ -77,7 +85,7 @@ def make_relative_error_animation(rollout, cfg, gif_path):
         ligne_reel.set_data(x, U_reel[m, nodes])
         ligne_pred.set_data(x, U[m, nodes])
         ligne_err.set_data(x, np.abs(U[m, nodes] - U_reel[m, nodes]) / amp_ref)
-        titre.set_text(f"left={C.bc_describe(rollout.left_bc)}  right={C.bc_describe(rollout.right_bc)}\n"
+        titre.set_text(f"left={bc_describe(rollout.left_bc)}  right={bc_describe(rollout.right_bc)}\n"
                         f"t = {m*cfg.dt:.3f}  (step {m})")
         return ligne_reel, ligne_pred, ligne_err, titre
 
@@ -94,10 +102,10 @@ def main():
                  f"training (training/code/main.py)?")
 
     cfg = Config()
-    print(f"=== gif -- left={C.bc_describe(LEFT_BC)}  right={C.bc_describe(RIGHT_BC)} ===")
+    print(f"=== gif -- left={bc_describe(LEFT_BC)}  right={bc_describe(RIGHT_BC)} ===")
 
-    INPUTS = C.make_feature_columns(INPUT_FIELDS, cfg)
-    OUTPUTS = C.make_output_columns(cfg)
+    INPUTS = make_feature_columns(INPUT_FIELDS, cfg)
+    OUTPUTS = make_output_columns(cfg)
 
     norm_stats = pd.read_csv(NORM_STATS_PATH, index_col=0)
     mu_in = norm_stats.loc[INPUTS, "mean"].values.astype(np.float32)
@@ -105,20 +113,21 @@ def main():
     mu_out = norm_stats.loc[OUTPUTS, "mean"].values.astype(np.float32)
     sd_out = norm_stats.loc[OUTPUTS, "std"].values.astype(np.float32)
 
-    modele = C.Reseau(n_inputs=len(INPUTS), n_outputs=len(OUTPUTS), hidden_sizes=cfg.HIDDEN_SIZES)
+    modele = ReseauConv(n_lags=cfg.M_BACK, n_points=2 * cfg.SS + 1,
+                        n_fields=len(INPUT_FIELDS), n_outputs=len(OUTPUTS))
     modele.load_state_dict(torch.load(MODEL_PATH, weights_only=True))
     modele.eval()
 
-    biais_repos = C._biais_repos(modele, mu_in, sd_in, mu_out, sd_out, cfg)
+    biais_repos = compute_biais_repos(modele, mu_in, sd_in, mu_out, sd_out, cfg)
 
     print("Reference FD simulation (ground truth)...")
-    U_reel = C.run_fd_simulation_general(LEFT_BC, RIGHT_BC, cfg)
+    U_reel = run_fd_simulation_general(LEFT_BC, RIGHT_BC, cfg)
 
     print("Autoregressive rollout of the model...")
-    U_pred = C._autoregressive_rollout_general(modele, U_reel, INPUT_FIELDS, mu_in, sd_in, mu_out, sd_out,
+    U_pred = autoregressive_rollout(modele, U_reel, INPUT_FIELDS, mu_in, sd_in, mu_out, sd_out,
                                                 biais_repos, LEFT_BC, RIGHT_BC, cfg)
 
-    rollout = C.RolloutResultGeneral(U=U_pred, U_reel=U_reel, left_bc=LEFT_BC, right_bc=RIGHT_BC)
+    rollout = RolloutResult(U=U_pred, U_reel=U_reel, left_bc=LEFT_BC, right_bc=RIGHT_BC)
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     gif_path = OUTPUT_DIR / f"propagation_onde_{bc_filename_tag(LEFT_BC)}_{bc_filename_tag(RIGHT_BC)}.gif"

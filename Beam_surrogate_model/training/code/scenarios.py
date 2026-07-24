@@ -7,7 +7,7 @@
 # every mix of families in between.
 import numpy as np
 
-ALLOWED_FAMILIES = ["gaussian", "sinusoid", "step", "ramp", "rest"]
+ALLOWED_FAMILIES = ["gaussian", "sinusoid", "rest"]
 BC_TYPE = "dirichlet"  # imposed displacement -- same physics as the original single-family project
 
 
