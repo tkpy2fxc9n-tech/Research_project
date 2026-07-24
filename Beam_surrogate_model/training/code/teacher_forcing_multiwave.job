@@ -1,0 +1,58 @@
+#!/bin/bash
+#SBATCH --job-name=teacher_forcing_multiwave
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=64
+#SBATCH --mem=128G
+#SBATCH --time=6:00:00
+#SBATCH --output=logs/teacher_forcing_multiwave_%j.log
+#SBATCH --error=logs/teacher_forcing_multiwave_%j.err
+#SBATCH --partition=short
+
+set -euo pipefail
+
+# To be launched from training/ (cd Beam_surrogate_model/training &&
+# sbatch code/teacher_forcing_multiwave.job) -- logs/ above and
+# mkdir -p logs below are therefore relative to training/, consistent with the
+# training/{code,logs,plots} structure. code/ contains main.py (plots ->
+# training/plots/simulation_<day>/, model -> Beam_surrogate_model/model.pth,
+# see PLOTS_DIR/PROJECT_DIR in main.py).
+cd /home/aph25/Beam_surrogate_model/training
+
+# logs/ must exist BEFORE Slurm starts the job (the --output/--error paths
+# above are opened as soon as it launches, before the first line of the
+# script) -- already created, but recreated here in case the folder was
+# deleted between two runs.
+mkdir -p logs
+# Cleans up logs from previous runs (without touching those of the current
+# job, already opened by Slurm at launch).
+find logs -maxdepth 1 -type f ! -name "*${SLURM_JOB_ID}*" -delete
+
+# 1 thread per process: generate_dataset_general spreads the FD simulations
+# across the allocated cpus via ProcessPoolExecutor -- a higher
+# OMP_NUM_THREADS would oversubscribe the cpus. Training itself is forced to
+# 1 thread anyway by commun.py (torch.set_num_threads(1)).
+export OMP_NUM_THREADS=1
+export MKL_NUM_THREADS=1
+export OPENBLAS_NUM_THREADS=1
+export NUMEXPR_NUM_THREADS=1
+export VECLIB_MAXIMUM_THREADS=1
+
+PYTHON=/home/aph25/Desktop/wave_env/bin/python
+
+# main.py now trains with plain one-step (teacher-forcing) batches instead
+# of the old autoregressive full-rollout + TBPTT scheme, so --tbptt-hops/
+# --group-size no longer exist -- --batch-size (default: Config.BATCH_SIZE)
+# replaces them as the per-update knob, and --patience controls early
+# stopping (default 20 epochs without a val improvement). The --time=6:00:00
+# budget below was sized for the old TBPTT training (400 simulations, 300
+# epochs of chained autoregressive reconstruction); plain batched training is
+# substantially cheaper per epoch (one forward pass, no rollout), so this is
+# now a conservative upper bound, not a tight estimate -- reassess (and
+# likely shrink) once a first run reports its actual wall time. If the job
+# is killed before N_EPOCHS/patience is reached, model.pth (saved at every
+# epoch that improves validation) and norm_stats.csv remain usable by
+# test_prediction.py, just with a less trained model than intended.
+time "$PYTHON" -u code/main.py --epochs 300 --n-samples 400 --patience 20
+
+echo "TEACHER_FORCING_MULTIWAVE JOB DONE"
