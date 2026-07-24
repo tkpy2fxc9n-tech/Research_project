@@ -1,12 +1,15 @@
 # Generates several rollout gifs (real vs predicted) for randomly-sampled
-# (left, right) scenarios, using the model already trained by
-# ../training/code/main.py -- showcases the network's behavior across the
-# same 5-family signal mix it was trained on (see scenarios.ALLOWED_FAMILIES:
-# gaussian, sinusoid, step, ramp, rest), rather than a single hand-picked
-# case (see test.py for that).
+# scenarios, using the model already trained by ../training/code/main.py --
+# showcases the network's behavior across the same 7-family signal mix it
+# was trained on (see training/code/scenarios.FAMILY_SHARES: fourier,
+# sinusoid, chirp, gaussian, shock, filtered_random, free_evolution), rather
+# than a single hand-picked case (see make_gif.py for that). Only the
+# network construction (ReseauConv, training/code/model.py) is specific to
+# this project -- everything else copied from
+# full_rollout_training_multisignal's make_gif_random.py.
 #
 # Usage:
-#   python3 test_random.py
+#   python3 make_gif_random.py
 import sys
 from pathlib import Path
 
@@ -20,9 +23,13 @@ TEST_DIR = Path(__file__).resolve().parent
 PROJECT_DIR = TEST_DIR.parent
 TRAINING_CODE_DIR = PROJECT_DIR / "training" / "code"
 sys.path.insert(0, str(TRAINING_CODE_DIR))
-from config import Config, INPUT_FIELDS
+from main import INPUT_FIELDS
+from model import ReseauConv
+from config import Config
+from waves import bc_describe
 import scenarios
-import commun as C
+from physics import (make_feature_columns, make_output_columns, run_fd_simulation_general,
+                      run_fd_simulation_free, autoregressive_rollout, biais_repos as compute_biais_repos)
 
 MODEL_PATH = PROJECT_DIR / "model.pth"
 NORM_STATS_PATH = PROJECT_DIR / "norm_stats.csv"
@@ -43,8 +50,8 @@ def bc_filename_tag(bc):
 
 def make_relative_error_animation(rollout_U, rollout_U_reel, left_bc, right_bc, cfg, gif_path):
     # Same rendering as test.py's local animation function -- kept local
-    # (not in commun.py) since commun.py is shared by several other projects
-    # and its default plots shouldn't change for all of them because of this one.
+    # (not in evaluation.py) so this showcase's plot style doesn't affect
+    # every other rollout plot in the project.
     U, U_reel = rollout_U, rollout_U_reel
     nodes = cfg.nodes
     x = np.linspace(0, cfg.L, cfg.Nx)
@@ -71,7 +78,7 @@ def make_relative_error_animation(rollout_U, rollout_U_reel, left_bc, right_bc, 
         ligne_reel.set_data(x, U_reel[m, nodes])
         ligne_pred.set_data(x, U[m, nodes])
         ligne_err.set_data(x, np.abs(U[m, nodes] - U_reel[m, nodes]) / amp_ref)
-        titre.set_text(f"left={C.bc_describe(left_bc)}  right={C.bc_describe(right_bc)}\n"
+        titre.set_text(f"left={bc_describe(left_bc)}  right={bc_describe(right_bc)}\n"
                         f"t = {m*cfg.dt:.3f}  (step {m})")
         return ligne_reel, ligne_pred, ligne_err, titre
 
@@ -89,8 +96,8 @@ def main():
 
     cfg = Config()
 
-    INPUTS = C.make_feature_columns(INPUT_FIELDS, cfg)
-    OUTPUTS = C.make_output_columns(cfg)
+    INPUTS = make_feature_columns(INPUT_FIELDS, cfg)
+    OUTPUTS = make_output_columns(cfg)
 
     norm_stats = pd.read_csv(NORM_STATS_PATH, index_col=0)
     mu_in = norm_stats.loc[INPUTS, "mean"].values.astype(np.float32)
@@ -98,22 +105,27 @@ def main():
     mu_out = norm_stats.loc[OUTPUTS, "mean"].values.astype(np.float32)
     sd_out = norm_stats.loc[OUTPUTS, "std"].values.astype(np.float32)
 
-    modele = C.Reseau(n_inputs=len(INPUTS), n_outputs=len(OUTPUTS), hidden_sizes=cfg.HIDDEN_SIZES)
+    modele = ReseauConv(n_lags=cfg.M_BACK, n_points=2 * cfg.SS + 1,
+                        n_fields=len(INPUT_FIELDS), n_outputs=len(OUTPUTS))
     modele.load_state_dict(torch.load(MODEL_PATH, weights_only=True))
     modele.eval()
 
-    biais_repos = C._biais_repos(modele, mu_in, sd_in, mu_out, sd_out, cfg)
+    biais_repos = compute_biais_repos(modele, mu_in, sd_in, mu_out, sd_out, cfg)
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
     rng = np.random.default_rng(SEED)
-    bc_pairs = scenarios.sample_scenarios(cfg, N_SAMPLES, C, rng)
+    scenario_list = scenarios.sample_scenarios(cfg, N_SAMPLES, rng)
 
-    for i, (left_bc, right_bc) in enumerate(bc_pairs):
-        print(f"--- [{i+1}/{N_SAMPLES}] left={C.bc_describe(left_bc)}  right={C.bc_describe(right_bc)} ---")
+    for i, (left_bc, right_bc, u0) in enumerate(scenario_list):
+        print(f"--- [{i+1}/{N_SAMPLES}] left={bc_describe(left_bc)}  right={bc_describe(right_bc)} ---")
 
-        U_reel = C.run_fd_simulation_general(left_bc, right_bc, cfg)
-        U_pred = C._autoregressive_rollout_general(modele, U_reel, INPUT_FIELDS, mu_in, sd_in, mu_out, sd_out,
+        if u0 is None:
+            U_reel = run_fd_simulation_general(left_bc, right_bc, cfg)
+        else:
+            U_reel = run_fd_simulation_free(left_bc, right_bc, u0, cfg)
+
+        U_pred = autoregressive_rollout(modele, U_reel, INPUT_FIELDS, mu_in, sd_in, mu_out, sd_out,
                                                     biais_repos, left_bc, right_bc, cfg)
 
         gif_path = OUTPUT_DIR / f"propagation_onde_{i:02d}_{bc_filename_tag(left_bc)}_{bc_filename_tag(right_bc)}.gif"

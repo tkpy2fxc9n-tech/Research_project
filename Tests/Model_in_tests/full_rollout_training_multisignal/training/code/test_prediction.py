@@ -1,12 +1,13 @@
 # Quick, no-retraining check of an already-trained model: rebuilds the exact
-# same Config (imported from config.py) the model was trained with, runs a
-# chosen ground-truth simulation (FD) and the network's
+# same Config (via CONFIG_OVERRIDES imported from main.py) the model was
+# trained with, runs a chosen ground-truth simulation (FD) and the network's
 # rollout side by side, and reports L2/Linf/sMAPE errors + the standard
 # commun.make_rollout_animation gif.
 #
 # Simplest usage: change LEFT_BC and RIGHT_BC just below (a boundary
-# condition is (bc_type, waveform_family, params) -- see scenarios.ALLOWED_FAMILIES
-# for the 5 families this model trained on: gaussian, sinusoid, step, ramp, rest),
+# condition is (bc_type, waveform_family, params) -- see scenarios.FAMILY_SHARES
+# for the 7 families this model trained on: fourier, sinusoid, chirp,
+# gaussian, shock, filtered_random, plus "rest" for a homogeneous/free end),
 # then
 #   python test_prediction.py
 import argparse
@@ -19,9 +20,14 @@ import torch
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
-from config import Config, INPUT_FIELDS
+from main import CONFIG_OVERRIDES
+from _commun_path import COMMUN_DIR
+import waveforms
+
+sys.path.insert(0, str(COMMUN_DIR))
 import commun as C
 
+INPUT_FIELDS = ["U"]
 TRAINING_DIR = SCRIPT_DIR.parent
 PROJECT_DIR = TRAINING_DIR.parent
 PLOTS_DIR = TRAINING_DIR / "plots"
@@ -30,12 +36,12 @@ PLOTS_DIR = TRAINING_DIR / "plots"
 #  PARAMETERS TO MODIFY HERE TO CHANGE THE BOUNDARY CONDITIONS
 # ============================================================
 LEFT_BC = ("dirichlet", "rest", {})
-RIGHT_BC = ("dirichlet", "sinusoid", {"A": 0.08, "omega": 4.5, "phase": 0.0})
+RIGHT_BC = ("neumann", "fourier", {"A": [0.03, 0.02, 0.015], "omega": [3.0, 5.5, 8.0], "phase": [0.0, 1.5, 3.0]})
 # ============================================================
 
 
 def parse_args():
-    p = argparse.ArgumentParser(description="Checks an already-trained multiwave model against a "
+    p = argparse.ArgumentParser(description="Checks an already-trained multisignal model against a "
                                              "chosen (left, right) boundary condition -- modifiable "
                                              "directly at the top of the file.")
     p.add_argument("--model-path", type=Path, default=None)
@@ -56,7 +62,8 @@ def main():
         sys.exit(f"Normalization stats not found: {norm_stats_path} -- have you run "
                  f"training (training/code/main.py)?")
 
-    cfg = Config()
+    cfg = C.Config(**CONFIG_OVERRIDES)
+    waveforms.register(C)
     print(f"=== test prediction -- left={C.bc_describe(LEFT_BC)}  right={C.bc_describe(RIGHT_BC)} ===")
 
     INPUTS = C.make_feature_columns(INPUT_FIELDS, cfg)

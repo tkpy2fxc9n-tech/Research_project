@@ -25,17 +25,10 @@ import numpy as np
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
-from _commun_path import COMMUN_DIR
+from config import Config, INPUT_FIELDS, METHOD_NAME, N_SCENARIOS, PATIENCE
 from data_split import split_by_simulation, compute_norm_stats
 import scenarios
-
-sys.path.insert(0, str(COMMUN_DIR))
 import commun as C
-
-# U only: the network only ever sees past displacement at each node, no
-# velocity (Ut) or curvature (Uxx) features.
-INPUT_FIELDS = ["U"]
-METHOD_NAME = "U_only_teacher_forcing_multiwave"
 
 # code/ is a subfolder of Beam_surrogate_model/training/ -- plots/ and logs/
 # are its sibling folders; model.pth and norm_stats.csv stay at the
@@ -43,27 +36,6 @@ METHOD_NAME = "U_only_teacher_forcing_multiwave"
 TRAINING_DIR = SCRIPT_DIR.parent
 PROJECT_DIR = TRAINING_DIR.parent
 PLOTS_DIR = TRAINING_DIR / "plots"
-
-# M_BACK=4/N_FWD=4 and a wider network (512,256,64 vs the old 64,32,16) --
-# plain teacher-forcing has no rollout to help it, so more temporal context
-# and capacity are given to make up for it. NOISE_STD=0: plain teacher-forcing
-# is meant to be exactly "real M_BACK window in -> predict -> average the
-# horizons' error -> update", with no input noise (a commun.train_model
-# feature, off by default) and no pushforward augmentation (removed from this
-# project's vendored commun.py entirely -- see commun.train_model).
-CONFIG_OVERRIDES = dict(
-    M_BACK=4,
-    N_FWD=4,
-    HIDDEN_SIZES=(512, 256, 64),
-    AMP_MIN=0.005,
-    AMP_MAX=0.15,
-    OMEGA_MIN=1.0,
-    OMEGA_MAX=10.0,
-    NOISE_STD=0.0,
-)
-
-N_SCENARIOS = 400  # number of randomly-sampled (left, right) boundary scenarios
-PATIENCE = 20       # epochs without a val improvement before stopping early
 
 
 def parse_args():
@@ -88,10 +60,10 @@ def parse_args():
 
 
 def build_config(n_epochs, batch_size):
-    kwargs = {"N_EPOCHS": n_epochs, **CONFIG_OVERRIDES}
+    kwargs = {"N_EPOCHS": n_epochs}
     if batch_size is not None:
         kwargs["BATCH_SIZE"] = batch_size
-    return C.Config(**kwargs)
+    return Config(**kwargs)
 
 
 def main():

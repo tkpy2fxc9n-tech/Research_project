@@ -1,12 +1,12 @@
 # Generates several rollout gifs (real vs predicted) for randomly-sampled
-# (left, right) scenarios, using the model already trained by
-# ../training/code/main.py -- showcases the network's behavior across the
-# same 5-family signal mix it was trained on (see scenarios.ALLOWED_FAMILIES:
-# gaussian, sinusoid, step, ramp, rest), rather than a single hand-picked
-# case (see test.py for that).
+# scenarios, using the model already trained by ../training/code/main.py --
+# showcases the network's behavior across the same 7-family signal mix it
+# was trained on (see scenarios.FAMILY_SHARES: fourier, sinusoid, chirp,
+# gaussian, shock, filtered_random, free_evolution), rather than a single
+# hand-picked case (see make_gif.py for that).
 #
 # Usage:
-#   python3 test_random.py
+#   python3 make_gif_random.py
 import sys
 from pathlib import Path
 
@@ -20,10 +20,16 @@ TEST_DIR = Path(__file__).resolve().parent
 PROJECT_DIR = TEST_DIR.parent
 TRAINING_CODE_DIR = PROJECT_DIR / "training" / "code"
 sys.path.insert(0, str(TRAINING_CODE_DIR))
-from config import Config, INPUT_FIELDS
+from main import CONFIG_OVERRIDES
+from _commun_path import COMMUN_DIR
+import waveforms
 import scenarios
+import free_evolution
+
+sys.path.insert(0, str(COMMUN_DIR))
 import commun as C
 
+INPUT_FIELDS = ["U"]
 MODEL_PATH = PROJECT_DIR / "model.pth"
 NORM_STATS_PATH = PROJECT_DIR / "norm_stats.csv"
 OUTPUT_DIR = TEST_DIR / "outputs"
@@ -42,7 +48,7 @@ def bc_filename_tag(bc):
 
 
 def make_relative_error_animation(rollout_U, rollout_U_reel, left_bc, right_bc, cfg, gif_path):
-    # Same rendering as test.py's local animation function -- kept local
+    # Same rendering as make_gif.py's local animation function -- kept local
     # (not in commun.py) since commun.py is shared by several other projects
     # and its default plots shouldn't change for all of them because of this one.
     U, U_reel = rollout_U, rollout_U_reel
@@ -87,7 +93,8 @@ def main():
         sys.exit(f"Normalization stats not found: {NORM_STATS_PATH} -- have you run "
                  f"training (training/code/main.py)?")
 
-    cfg = Config()
+    cfg = C.Config(**CONFIG_OVERRIDES)
+    waveforms.register(C)
 
     INPUTS = C.make_feature_columns(INPUT_FIELDS, cfg)
     OUTPUTS = C.make_output_columns(cfg)
@@ -107,12 +114,16 @@ def main():
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
     rng = np.random.default_rng(SEED)
-    bc_pairs = scenarios.sample_scenarios(cfg, N_SAMPLES, C, rng)
+    scenario_list = scenarios.sample_scenarios(cfg, N_SAMPLES, C, rng)
 
-    for i, (left_bc, right_bc) in enumerate(bc_pairs):
+    for i, (left_bc, right_bc, u0) in enumerate(scenario_list):
         print(f"--- [{i+1}/{N_SAMPLES}] left={C.bc_describe(left_bc)}  right={C.bc_describe(right_bc)} ---")
 
-        U_reel = C.run_fd_simulation_general(left_bc, right_bc, cfg)
+        if u0 is None:
+            U_reel = C.run_fd_simulation_general(left_bc, right_bc, cfg)
+        else:
+            U_reel = free_evolution.run_fd_simulation_free(left_bc, right_bc, u0, cfg, C)
+
         U_pred = C._autoregressive_rollout_general(modele, U_reel, INPUT_FIELDS, mu_in, sd_in, mu_out, sd_out,
                                                     biais_repos, left_bc, right_bc, cfg)
 

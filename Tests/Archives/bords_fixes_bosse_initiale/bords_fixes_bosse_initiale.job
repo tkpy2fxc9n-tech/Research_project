@@ -1,0 +1,25 @@
+#!/bin/bash
+#SBATCH --job-name=bords_fixes_bosse_initiale
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=32
+#SBATCH --mem=64G
+#SBATCH --time=5:59:00
+#SBATCH --output=logs/%x_%j.log
+#SBATCH --error=logs/%x_%j.err
+#SBATCH --partition=short
+
+export OMP_NUM_THREADS=1
+export MKL_NUM_THREADS=1
+export OPENBLAS_NUM_THREADS=1
+export NUMEXPR_NUM_THREADS=1
+export VECLIB_MAXIMUM_THREADS=1
+
+cd /home/aph25/recherche/bords_fixes_bosse_initiale
+mkdir -p logs
+# Nettoie les logs des runs précédents (sans toucher à ceux du job en cours,
+# déjà ouverts par Slurm au lancement).
+find logs -maxdepth 1 -type f ! -name "*${SLURM_JOB_ID}*" -delete
+
+PYTHON=/home/aph25/Desktop/wave_env/bin/python
+time "$PYTHON" -u main.py
