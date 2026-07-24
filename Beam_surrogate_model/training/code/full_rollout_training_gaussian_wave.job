@@ -17,7 +17,7 @@ set -euo pipefail
 # training/{code,logs,plots} structure. code/ contains main.py (plots ->
 # training/plots/simulation_<day>/, model -> full_rollout_training_gaussian_wave/model.pth,
 # see PLOTS_DIR/PROJECT_DIR in main.py).
-cd /home/aph25/Building_surrogate_model/The_surrogate_model/full_rollout_training_gaussian_wave/training
+cd /home/aph25/Beam_surrogate_model/training
 
 # logs/ must exist BEFORE Slurm starts the job (the --output/--error paths
 # above are opened as soon as it launches, before the first line of the

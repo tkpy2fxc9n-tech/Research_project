@@ -3,4 +3,4 @@
 # Code_comparaison_des_inputs, so the path must be absolute).
 from pathlib import Path
 
-COMMUN_DIR = Path("/home/aph25/Building_surrogate_model/Archives/comparaisons/comparaison_des_inputs")
+COMMUN_DIR = Path("/home/aph25/Tests_archives/Archives/comparaisons/comparaison_des_inputs")
