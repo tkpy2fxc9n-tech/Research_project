@@ -1,8 +1,7 @@
 # Torch port (differentiable, never falling back to numpy) of the
-# reconstruction physics already present and validated in
-# Code_comparaison_des_inputs/commun.py (uxx_field, field_value, build_window,
-# reconstruct). No in-place operations: every step rebuilds a new tensor,
-# to never disturb the gradient computation path.
+# reconstruction physics in commun.py (uxx_field, field_value, build_window,
+# reconstruct_general). No in-place operations: every step rebuilds a new
+# tensor, to never disturb the gradient computation path.
 import sys
 from pathlib import Path
 
@@ -10,9 +9,6 @@ import torch
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
-from _commun_path import COMMUN_DIR
-
-sys.path.insert(0, str(COMMUN_DIR))
 import commun as C
 
 
@@ -60,12 +56,14 @@ def build_window_torch(history: list[torch.Tensor], input_fields: list[str], cfg
 
 
 def reconstruct_torch(baseline: torch.Tensor, pred_norm: torch.Tensor,
-                       A_list: list[float], omega_list: list[float], n_curr: int,
+                       bc_left_list: list, bc_right_list: list, n_curr: int,
                        mu_out_t: torch.Tensor, sd_out_t: torch.Tensor,
                        biais_repos_t: torch.Tensor | None, cfg: "C.Config") -> tuple[list[torch.Tensor], list[int]]:
     # baseline: (G, Ntot), state BEFORE this hop -- fixed for all h (don't
-    # chain h=1 into h=2, like C.reconstruct).
+    # chain h=1 into h=2, like C.reconstruct_general).
     # pred_norm: (G*Nx, N_FWD), raw network output for this hop.
+    # bc_left_list/bc_right_list: one C.BCSpec per group member (dirichlet
+    # only -- see C.apply_boundary), independently sampled per end.
     # Returns (list of N_FWD tensors (G, Ntot), list of corresponding time indices s).
     nodes = cfg.nodes
     i_left, i_right, Ntot = cfg.i_left, cfg.i_right, cfg.Ntot
@@ -83,13 +81,15 @@ def reconstruct_torch(baseline: torch.Tensor, pred_norm: torch.Tensor,
         t = s * cfg.dt
         interior_nodes = baseline[:, nodes] + deltas[:, :, h - 1]  # (G, Nx), physical values at the nodes
 
-        right_vals = torch.tensor([C.u_right_val(A, omega, t) for A, omega in zip(A_list, omega_list)],
-                                   dtype=baseline.dtype)
+        # Dirichlet fill on both ends (indices [0, i_left] / [i_right, Ntot)
+        # included, so it also overwrites the physical value computed at
+        # node i_left -- like C.apply_boundary).
+        left_vals = torch.tensor([C.bc_value(bc, t) for bc in bc_left_list], dtype=baseline.dtype)
+        left_block = left_vals.unsqueeze(1).expand(G, i_left + 1)
+
+        right_vals = torch.tensor([C.bc_value(bc, t) for bc in bc_right_list], dtype=baseline.dtype)
         right_block = right_vals.unsqueeze(1).expand(G, Ntot - i_right)
 
-        # left clamping (indices [0, i_left] included, so it also overwrites
-        # the physical value computed at node i_left -- like C.reconstruct)
-        left_block = torch.zeros(G, i_left + 1, dtype=baseline.dtype)
         u_full = torch.cat([left_block, interior_nodes[:, 1:], right_block], dim=1)
 
         if cfg.SMOOTH_ALPHA > 0:

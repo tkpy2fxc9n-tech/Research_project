@@ -26,16 +26,22 @@ BC_TYPES = ("dirichlet", "neumann")
 # gaussian / sinusoid / rest
 # ---------------------------------------------------------------------------
 def sample_gaussian_params(rng, cfg) -> dict:
+    # sigma (pulse width, in time units) sampled directly from
+    # cfg.OMEGA_MIN/OMEGA_MAX -- previously this family reused "omega" and
+    # remapped it to a width via a hardcoded np.interp([1.0, 10.0], ...)
+    # table, which silently clamped to a constant width once OMEGA_MIN/MAX
+    # moved below 1.0. sigma is the real, direct knob now: no remapping, no
+    # hardcoded range independent of Config.
     return {
         "A": float(rng.uniform(cfg.AMP_MIN, cfg.AMP_MAX)),
-        "omega": float(rng.uniform(cfg.OMEGA_MIN, cfg.OMEGA_MAX)),
+        "sigma": float(rng.uniform(cfg.OMEGA_MIN, cfg.OMEGA_MAX)),
     }
 
 
 def gaussian_value(p: dict, t: float) -> float:
     # A single bump, centered so it has mostly risen to zero by t=0
     # (t0 = 4*sigma puts the peak a few sigma in).
-    sigma = np.interp(p["omega"], [1.0, 10.0], [0.15, 0.07])
+    sigma = p["sigma"]
     t0 = 4.0 * sigma
     return p["A"] * np.exp(-((t - t0) / sigma) ** 2)
 

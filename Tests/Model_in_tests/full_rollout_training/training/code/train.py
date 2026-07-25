@@ -17,20 +17,17 @@ import matplotlib.pyplot as plt
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
-from _commun_path import COMMUN_DIR
 from rollout_torch import build_window_torch, reconstruct_torch
-
-sys.path.insert(0, str(COMMUN_DIR))
 import commun as C
 
 
-def make_epoch_groups(pairs: list[tuple], group_size: int, rng: np.random.Generator) -> list[list[tuple]]:
-    order = rng.permutation(len(pairs))
-    shuffled = [pairs[i] for i in order]
+def make_epoch_groups(idxs: list[int], group_size: int, rng: np.random.Generator) -> list[list[int]]:
+    order = rng.permutation(len(idxs))
+    shuffled = [idxs[i] for i in order]
     return [shuffled[i:i + group_size] for i in range(0, len(shuffled), group_size)]
 
 
-def rollout_group_tbptt(modele, group_pairs, FIELDS, input_fields,
+def rollout_group_tbptt(modele, group_idxs, FIELDS, bc_pairs, input_fields,
                          mu_in_t, sd_in_t, mu_out_t, sd_out_t, biais_repos_t,
                          criterion, optimiseur, cfg: "C.Config", tbptt_hops: int) -> tuple[float, int]:
     # Full rollout (82 hops) for a group of simulations, WITHOUT ever
@@ -43,15 +40,15 @@ def rollout_group_tbptt(modele, group_pairs, FIELDS, input_fields,
     # correct then detach the state (the gradient thread is cut, but the
     # rollout keeps going on the PREDICTED state, never reset to ground truth).
     nodes = cfg.nodes
-    G, Nx = len(group_pairs), len(nodes)
-    A_list = [A for A, _ in group_pairs]
-    omega_list = [omega for _, omega in group_pairs]
+    G, Nx = len(group_idxs), len(nodes)
+    bc_left_list = [bc_pairs[idx][0] for idx in group_idxs]
+    bc_right_list = [bc_pairs[idx][1] for idx in group_idxs]
     history_needed = cfg.M_BACK * cfg.ndt
 
     history = []
     for lag in range(cfg.M_BACK, -1, -1):
         m = history_needed - lag * cfg.ndt
-        arr = np.stack([FIELDS[pair][m] for pair in group_pairs], axis=0)
+        arr = np.stack([FIELDS[idx][m] for idx in group_idxs], axis=0)
         history.append(torch.tensor(arr, dtype=torch.float32))
 
     hops = list(range(history_needed, cfg.Nt - cfg.N_FWD * cfg.ndt + 1, cfg.N_FWD * cfg.ndt))
@@ -59,16 +56,16 @@ def rollout_group_tbptt(modele, group_pairs, FIELDS, input_fields,
     segment_loss, segment_hops = torch.zeros(()), 0
 
     for i, n in enumerate(hops):
-        X = (build_window_torch(history, input_fields, cfg) - mu_in_t) / sd_in_t
+        X = ((build_window_torch(history, input_fields, cfg) - mu_in_t) / sd_in_t).clamp(-cfg.INPUT_CLIP, cfg.INPUT_CLIP)
         pred_norm = modele(X)  # (G*Nx, N_FWD)
 
         baseline = history[-1]
-        new_states, s_list = reconstruct_torch(baseline, pred_norm, A_list, omega_list, n,
+        new_states, s_list = reconstruct_torch(baseline, pred_norm, bc_left_list, bc_right_list, n,
                                                  mu_out_t, sd_out_t, biais_repos_t, cfg)
 
         baseline_nodes = baseline[:, nodes]
         target_list = [
-            torch.tensor(np.stack([FIELDS[pair][s][nodes] for pair in group_pairs], axis=0), dtype=torch.float32)
+            torch.tensor(np.stack([FIELDS[idx][s][nodes] for idx in group_idxs], axis=0), dtype=torch.float32)
             - baseline_nodes
             for s in s_list
         ]
@@ -85,6 +82,7 @@ def rollout_group_tbptt(modele, group_pairs, FIELDS, input_fields,
         if segment_hops == tbptt_hops or i == len(hops) - 1:
             optimiseur.zero_grad()
             (segment_loss / segment_hops).backward()
+            torch.nn.utils.clip_grad_norm_(modele.parameters(), cfg.GRAD_CLIP_NORM)
             optimiseur.step()
             n_updates += 1
             history = [h.detach() for h in history]
@@ -93,11 +91,12 @@ def rollout_group_tbptt(modele, group_pairs, FIELDS, input_fields,
     return total_loss_log / len(hops), n_updates
 
 
-def evaluate_val_rollout(modele, FIELDS, pairs_val, input_fields, norm_stats, INPUTS, OUTPUTS, cfg: "C.Config") -> float:
+def evaluate_val_rollout(modele, FIELDS, idx_val, bc_pairs, input_fields, norm_stats, INPUTS, OUTPUTS,
+                          cfg: "C.Config") -> float:
     # Reuses the existing, already-validated numpy/no_grad evaluation
-    # rollout (C._autoregressive_rollout) -- no need to rewrite a second
-    # torch version for monitoring, only the training step needs to stay
-    # differentiable.
+    # rollout (C._autoregressive_rollout_general) -- no need to rewrite a
+    # second torch version for monitoring, only the training step needs to
+    # stay differentiable.
     mu_in = norm_stats.loc[INPUTS, "mean"].values.astype(np.float32)
     sd_in = norm_stats.loc[INPUTS, "std"].values.astype(np.float32)
     mu_out = norm_stats.loc[OUTPUTS, "mean"].values.astype(np.float32)
@@ -107,16 +106,17 @@ def evaluate_val_rollout(modele, FIELDS, pairs_val, input_fields, norm_stats, IN
     modele.eval()
     errs = []
     with torch.no_grad():
-        for A, omega in pairs_val:
-            U_reel = FIELDS[(A, omega)]
-            U_pred = C._autoregressive_rollout(modele, U_reel, input_fields, mu_in, sd_in, mu_out, sd_out,
-                                                biais_repos, A, omega, cfg)
+        for idx in idx_val:
+            left_bc, right_bc = bc_pairs[idx]
+            U_reel = FIELDS[idx]
+            U_pred = C._autoregressive_rollout_general(modele, U_reel, input_fields, mu_in, sd_in, mu_out, sd_out,
+                                                         biais_repos, left_bc, right_bc, cfg)
             errs.append(C.l2_rel(U_pred[:, cfg.nodes], U_reel[:, cfg.nodes]))
     modele.train()
     return float(np.mean(errs))
 
 
-def train_full_rollout(modele, FIELDS, pairs_train, pairs_val, input_fields,
+def train_full_rollout(modele, FIELDS, bc_pairs, idx_train, idx_val, input_fields,
                         norm_stats, INPUTS, OUTPUTS, cfg: "C.Config", group_size: int,
                         n_epochs: int, model_path: Path, tbptt_hops: int = 10) -> "C.TrainResult":
     criterion = nn.MSELoss()
@@ -136,23 +136,23 @@ def train_full_rollout(modele, FIELDS, pairs_train, pairs_val, input_fields,
     t0 = time.perf_counter()
     for epoch in range(1, n_epochs + 1):
         biais_repos_t = torch.tensor(C._biais_repos(modele, mu_in, sd_in, mu_out, sd_out, cfg))
-        groups = make_epoch_groups(pairs_train, group_size, rng)
+        groups = make_epoch_groups(idx_train, group_size, rng)
 
         modele.train()
         t_epoch0 = time.perf_counter()
         epoch_loss = 0.0
-        for i, group_pairs in enumerate(groups):
+        for i, group_idxs in enumerate(groups):
             t_g0 = time.perf_counter()
-            avg_loss, n_updates = rollout_group_tbptt(modele, group_pairs, FIELDS, input_fields,
+            avg_loss, n_updates = rollout_group_tbptt(modele, group_idxs, FIELDS, bc_pairs, input_fields,
                                                         mu_in_t, sd_in_t, mu_out_t, sd_out_t, biais_repos_t,
                                                         criterion, optimiseur, cfg, tbptt_hops)
             epoch_loss += avg_loss
             print(f"  epoch {epoch:3d}  group {i+1:3d}/{len(groups)} "
-                  f"({len(group_pairs)} sims) -- avg loss/hop={avg_loss:.4f} -- "
+                  f"({len(group_idxs)} sims) -- avg loss/hop={avg_loss:.4f} -- "
                   f"{n_updates} corrections -- {time.perf_counter()-t_g0:.2f}s/group")
         epoch_loss /= len(groups)
 
-        val_err = evaluate_val_rollout(modele, FIELDS, pairs_val, input_fields, norm_stats, INPUTS, OUTPUTS, cfg)
+        val_err = evaluate_val_rollout(modele, FIELDS, idx_val, bc_pairs, input_fields, norm_stats, INPUTS, OUTPUTS, cfg)
         historique_train.append(epoch_loss)
         historique_val.append(val_err)
 

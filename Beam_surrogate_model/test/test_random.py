@@ -62,6 +62,13 @@ def make_relative_error_animation(rollout_U, rollout_U_reel, left_bc, right_bc, 
     ligne_err, = axB.plot([], [], "k", lw=1.5, label="error / peak amplitude")
     err_frames = [np.abs(U[m, nodes] - U_reel[m, nodes]) / amp_ref for m in frames]
     err_max = max(np.max([e.max() for e in err_frames]) * 1.2, 1e-9)
+    if not np.isfinite(err_max):
+        # Same known failure mode as commun.make_rollout_animation: the
+        # autoregressive rollout diverged (NaN/Inf predictions). Clamp to the
+        # real signal's scale so the gif still renders instead of crashing.
+        print(f"WARNING: rollout diverged (non-finite max error) while animating {gif_path.name} "
+              f"-- y-axis clamped to the real signal's scale.")
+        err_max = max(ymax, 1e-9)
     axB.set_xlim(0, cfg.L); axB.set_ylim(0, err_max)
     axB.set_xlabel("x"); axB.set_ylabel("error / peak amplitude"); axB.legend(loc="upper right"); axB.grid(True)
 

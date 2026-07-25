@@ -76,21 +76,24 @@ def parse_args():
     p.add_argument("--batch-size", type=int, default=None,
                     help="Rows per gradient update (default: Config.BATCH_SIZE, currently 512). Each batch's "
                          "loss is the average error over the whole batch AND both delta_u horizons.")
-    p.add_argument("--early-stop-patience", type=int, default=15,
+    p.add_argument("--early-stop-patience", type=int, default=None,
                     help="Stop training once this many consecutive epochs pass without a new best val loss "
-                         "(0 disables early stopping, always running the full --epochs count).")
+                         "(default: Config.EARLY_STOP_PATIENCE; 0 disables early stopping, always running "
+                         "the full --epochs count).")
     return p.parse_args()
 
 
-def build_config(n_epochs, batch_size):
-    # n_epochs=None (no --epochs, not --smoke-test) -> Config's own N_EPOCHS
-    # default applies, unoverridden -- config.py stays the single source of
-    # truth unless the CLI explicitly asks for a different value.
+def build_config(n_epochs, batch_size, early_stop_patience):
+    # None -> Config's own default applies, unoverridden -- config.py stays
+    # the single source of truth unless the CLI explicitly asks for a
+    # different value.
     kwargs = {}
     if n_epochs is not None:
         kwargs["N_EPOCHS"] = n_epochs
     if batch_size is not None:
         kwargs["BATCH_SIZE"] = batch_size
+    if early_stop_patience is not None:
+        kwargs["EARLY_STOP_PATIENCE"] = early_stop_patience
     return Config(**kwargs)
 
 
@@ -205,10 +208,10 @@ def main():
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     n_epochs = args.epochs if args.epochs is not None else (2 if args.smoke_test else None)
     n_samples = args.n_samples if args.n_samples is not None else (16 if args.smoke_test else N_BC_SAMPLES)
-    cfg = build_config(n_epochs, args.batch_size)
+    cfg = build_config(n_epochs, args.batch_size, args.early_stop_patience)
     set_seeds(cfg)
 
-    patience = args.early_stop_patience if args.early_stop_patience > 0 else None
+    patience = cfg.EARLY_STOP_PATIENCE if cfg.EARLY_STOP_PATIENCE > 0 else None
 
     mode = "SMOKE TEST" if args.smoke_test else "run"
     print(f"=== full_rollout_training_conv1d [{mode}] — input fields: {INPUT_FIELDS} — "

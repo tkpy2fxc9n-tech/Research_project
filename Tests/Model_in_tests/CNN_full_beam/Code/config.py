@@ -1,12 +1,12 @@
-# Single source of truth for every run parameter of this project. Defaults
-# below are the values THIS project actually trains with (plain one-step
-# teacher forcing, no input noise) -- not a generic 4-project default
-# silently overridden elsewhere (main.py used to carry a separate
-# CONFIG_OVERRIDES dict on top of a shared commun.Config() with different
-# defaults; that indirection is gone, this is the only Config now). Only
-# N_EPOCHS/BATCH_SIZE still vary at the call site (main.py's
-# --epochs/--batch-size CLI flags) -- that's a real per-run knob, not
-# leftover cross-project indirection.
+# Single source of truth for every run parameter of this project. Copied
+# unchanged from full_rollout_training_conv1d/training/code/config.py -- the
+# beam/grid/PDE parameters (Nx, SS, ndt, M_BACK, N_FWD, ...) mean exactly the
+# same thing whether the network sees a per-node window or the whole beam.
+# main.py trains with the differentiable full-rollout (TBPTT) scheme here
+# (see train.py), not plain teacher forcing -- BATCH_SIZE/NOISE_STD stay
+# unused by that path but are kept for the optional plain-teacher-forcing
+# fallback in training.py. N_EPOCHS still varies at the call site (main.py's
+# --epochs CLI flag).
 from __future__ import annotations
 
 from dataclasses import dataclass
