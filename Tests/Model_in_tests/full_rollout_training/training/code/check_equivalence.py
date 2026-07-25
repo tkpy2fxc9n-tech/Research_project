@@ -1,9 +1,11 @@
 # Sanity check to run BEFORE any training: verifies that the torch port
 # (rollout_torch.py) faithfully reproduces the numpy physics already
 # validated in commun.py, over a few hops and a model with fixed random
-# weights. Does NOT test the gradient (only the values), the goal is to
-# catch a transcription error (column order, boundary conditions,
-# smoothing) before investing compute time in a training run.
+# weights, for one gaussian end and one rest end (exercises both branches of
+# the generalized dirichlet fill). Does NOT test the gradient (only the
+# values), the goal is to catch a transcription error (column order,
+# boundary conditions, smoothing) before investing compute time in a
+# training run.
 import sys
 from pathlib import Path
 
@@ -12,26 +14,26 @@ import torch
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
-from _commun_path import COMMUN_DIR
 from rollout_torch import build_window_torch, reconstruct_torch
-
-sys.path.insert(0, str(COMMUN_DIR))
 import commun as C
+from config import Config
 
 N_HOPS_TEST = 3
 TOLERANCE = 1e-4
 
 
 def main():
-    cfg = C.Config()
+    cfg = Config()
     C.set_seeds(cfg)
 
     input_fields = ["U", "Ut", "Uxx"]
     INPUTS = C.make_feature_columns(input_fields, cfg)
     OUTPUTS = C.make_output_columns(cfg)
 
-    A, omega = cfg.AMPLITUDES[0], cfg.PULSATIONS[0]
-    U_reel = C.run_fd_simulation(A, omega, cfg)
+    rng = np.random.default_rng(0)
+    bc_left = ("dirichlet", "gaussian", C.sample_gaussian_params(rng, cfg))
+    bc_right = ("dirichlet", "rest", C.sample_rest_params(rng, cfg))
+    U_reel = C.run_fd_simulation_general(bc_left, bc_right, cfg)
 
     modele = C.Reseau(n_inputs=len(INPUTS), n_outputs=len(OUTPUTS), hidden_sizes=cfg.HIDDEN_SIZES)
     modele.eval()
@@ -56,7 +58,8 @@ def main():
         X = (C.build_window(m_list, lambda m: U_ref[m], input_fields, cfg) - mu_in) / sd_in
         with torch.no_grad():
             sortie = modele(torch.tensor(X)).numpy()
-        champs = C.reconstruct(U_ref[n], n, sortie, A, omega, mu_out, sd_out, cfg, biais_repos=biais_repos)
+        champs = C.reconstruct_general(U_ref[n], n, sortie, bc_left, bc_right, mu_out, sd_out, cfg,
+                                        biais_repos=biais_repos)
         for s, u in champs.items():
             U_ref[s] = u
 
@@ -72,7 +75,7 @@ def main():
         for n in range(history_needed, n_stop, cfg.N_FWD * cfg.ndt):
             X = (build_window_torch(history, input_fields, cfg) - mu_in_t) / sd_in_t
             pred_norm = modele(X)
-            new_states, _ = reconstruct_torch(history[-1], pred_norm, [A], [omega], n,
+            new_states, _ = reconstruct_torch(history[-1], pred_norm, [bc_left], [bc_right], n,
                                                mu_out_t, sd_out_t, biais_repos_t, cfg)
             history = history[cfg.N_FWD:] + new_states
 

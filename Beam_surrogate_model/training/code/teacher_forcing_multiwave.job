@@ -53,6 +53,6 @@ PYTHON=/home/aph25/Desktop/wave_env/bin/python
 # is killed before N_EPOCHS/patience is reached, model.pth (saved at every
 # epoch that improves validation) and norm_stats.csv remain usable by
 # test_prediction.py, just with a less trained model than intended.
-time "$PYTHON" -u code/main.py --epochs 300 --n-samples 400 --patience 20
+time "$PYTHON" -u code/main.py 
 
 echo "TEACHER_FORCING_MULTIWAVE JOB DONE"

@@ -326,7 +326,8 @@ def plot_smape(t_axis, smape_list, output_dir: Path):
     plt.close()
 
 
-def make_rollout_animation(rollout: "RolloutResultGeneral", cfg: Config, output_dir: Path):
+def make_rollout_animation(rollout: "RolloutResultGeneral", cfg: Config, output_dir: Path,
+                            filename: str = "propagation_onde.gif"):
     U, U_reel = rollout.U, rollout.U_reel
     nodes = cfg.nodes
     x = np.linspace(0, cfg.L, cfg.Nx)
@@ -342,6 +343,16 @@ def make_rollout_animation(rollout: "RolloutResultGeneral", cfg: Config, output_
 
     ligne_err, = axB.plot([], [], "k", lw=1.5, label="|predicted - real|")
     err_max = max(np.max([np.abs(U[m, nodes] - U_reel[m, nodes]).max() for m in frames]) * 1.2, 1e-9)
+    if not np.isfinite(err_max):
+        # The autoregressive rollout diverged (predictions blew up to NaN/Inf)
+        # -- a known, recurring failure mode for this line of work, not a rare
+        # edge case. Fall back to the real signal's own scale so the gif still
+        # renders (visibly clipped/wrong past the divergence point) instead of
+        # crashing matplotlib's axis-limit validation and losing the whole run's
+        # resume.txt export downstream.
+        print(f"WARNING: rollout diverged (non-finite max error) while animating {filename} "
+              f"-- y-axis clamped to the real signal's scale.")
+        err_max = max(ymax, 1e-9)
     axB.set_xlim(0, cfg.L); axB.set_ylim(0, err_max)
     axB.set_xlabel("x"); axB.set_ylabel("absolute error"); axB.legend(loc="upper right"); axB.grid(True)
 
@@ -355,7 +366,7 @@ def make_rollout_animation(rollout: "RolloutResultGeneral", cfg: Config, output_
         return ligne_reel, ligne_pred, ligne_err, titre
 
     anim = animation.FuncAnimation(fig_anim, maj, frames=frames, interval=50, blit=False)
-    anim.save(output_dir / "propagation_onde.gif", writer="pillow", fps=20, dpi=110)
+    anim.save(output_dir / filename, writer="pillow", fps=20, dpi=110)
     plt.close(fig_anim)
 
 
@@ -476,7 +487,10 @@ def _write_resume_body(f, cfg: Config, method_name: str, df: pd.DataFrame, INPUT
     f.write(f"M / N           : M_BACK={cfg.M_BACK}, N_FWD={cfg.N_FWD}\n")
     f.write(f"Input fields    : {', '.join(_input_fields_from_columns(INPUTS))}\n")
     f.write(f"Stencil         : {2*cfg.SS+1} points (SS={cfg.SS} each side)\n")
-    f.write(f"Sampling grid   : {cfg.N_GRID}x{cfg.N_GRID} sims, "
+    # Randomly-sampled (left, right) BC scenarios (see scenarios.py), not a
+    # dense grid -- df["sim_idx"] is the authoritative simulation count (set
+    # in _simulate_one_general), not a separate n_samples argument here.
+    f.write(f"Sampling        : {df['sim_idx'].nunique():,} sims, "
             f"A in [{cfg.AMP_MIN}, {cfg.AMP_MAX}], omega in [{cfg.OMEGA_MIN}, {cfg.OMEGA_MAX}]\n")
     f.write(f"{rollout_line}\n")
     f.write(f"Smoothing/noise : SMOOTH_ALPHA={cfg.SMOOTH_ALPHA}, NOISE_STD={cfg.NOISE_STD}\n")
@@ -611,10 +625,21 @@ BCSpec = tuple  # (bc_type: str, waveform_family: str, params: dict)
 BC_TYPES = ("dirichlet", "neumann")
 
 
+def _sample_amplitude(rng, cfg: Config) -> float:
+    # Rounded at the source (not just at display in bc_describe): every
+    # sampled "A" -- training or a manually-typed test BC that reuses this
+    # helper -- carries this precision for real, not just in printouts.
+    return round(float(rng.uniform(cfg.AMP_MIN, cfg.AMP_MAX)), 3)
+
+
+def _sample_omega(rng, cfg: Config) -> float:
+    return round(float(rng.uniform(cfg.OMEGA_MIN, cfg.OMEGA_MAX)), 1)
+
+
 def sample_gaussian_params(rng, cfg: Config) -> dict:
     return {
-        "A": float(rng.uniform(cfg.AMP_MIN, cfg.AMP_MAX)),
-        "omega": float(rng.uniform(cfg.OMEGA_MIN, cfg.OMEGA_MAX)),
+        "A": _sample_amplitude(rng, cfg),
+        "omega": _sample_omega(rng, cfg),
     }
 
 
@@ -628,8 +653,8 @@ def gaussian_value(p: dict, t: float) -> float:
 
 def sample_sinusoid_params(rng, cfg: Config) -> dict:
     return {
-        "A": float(rng.uniform(cfg.AMP_MIN, cfg.AMP_MAX)),
-        "omega": float(rng.uniform(cfg.OMEGA_MIN, cfg.OMEGA_MAX)),
+        "A": _sample_amplitude(rng, cfg),
+        "omega": _sample_omega(rng, cfg),
         "phase": float(rng.uniform(0.0, 2 * np.pi)),
     }
 
@@ -642,7 +667,7 @@ def sinusoid_value(p: dict, t: float) -> float:
 
 def sample_step_params(rng, cfg: Config) -> dict:
     return {
-        "A": float(rng.uniform(cfg.AMP_MIN, cfg.AMP_MAX)),
+        "A": _sample_amplitude(rng, cfg),
         "t_onset": float(rng.uniform(0.0, 0.3 * cfg.t_end)),
     }
 
@@ -655,7 +680,7 @@ def step_value(p: dict, t: float) -> float:
 
 def sample_ramp_params(rng, cfg: Config) -> dict:
     return {
-        "A": float(rng.uniform(cfg.AMP_MIN, cfg.AMP_MAX)),
+        "A": _sample_amplitude(rng, cfg),
         "duration": float(rng.uniform(0.1 * cfg.t_end, 0.5 * cfg.t_end)),
     }
 
@@ -869,9 +894,31 @@ def run_rollout_general(modele, FIELDS: dict, bc_pairs: list[tuple[BCSpec, BCSpe
     return RolloutResultGeneral(U=U, U_reel=U_reel, left_bc=left_bc, right_bc=right_bc)
 
 
+def check_bc_in_training_range(bc: BCSpec, cfg: Config, side: str) -> None:
+    # BCs sampled via scenarios.py (training, test_random.py) can never
+    # trigger this by construction -- it's for the hand-typed LEFT_BC/RIGHT_BC
+    # in test.py/test_prediction.py, which aren't otherwise constrained to
+    # what the model actually trained on.
+    _, family, params = bc
+    if "A" in params and not (cfg.AMP_MIN <= params["A"] <= cfg.AMP_MAX):
+        print(f"WARNING: {side} BC amplitude A={params['A']} is outside the training range "
+              f"[{cfg.AMP_MIN}, {cfg.AMP_MAX}] -- this is an out-of-distribution test.")
+    if "omega" in params and not (cfg.OMEGA_MIN <= params["omega"] <= cfg.OMEGA_MAX):
+        print(f"WARNING: {side} BC omega={params['omega']} is outside the training range "
+              f"[{cfg.OMEGA_MIN}, {cfg.OMEGA_MAX}] -- this is an out-of-distribution test.")
+
+
 def bc_describe(bc: BCSpec) -> str:
+    # Display-only rounding (the raw, full-precision params in `bc` itself
+    # are untouched, so the simulation/rollout math is unaffected) -- 3
+    # decimals for amplitude, 1 for omega, instead of printing every float
+    # at its full ~17-digit repr.
     bc_type, family, params = bc
-    param_str = ", ".join(f"{k}={v}" for k, v in params.items())
+    def _fmt(k, v):
+        if isinstance(v, float):
+            return round(v, 1 if k == "omega" else 3)
+        return v
+    param_str = ", ".join(f"{k}={_fmt(k, v)}" for k, v in params.items())
     return f"{bc_type}/{family}({param_str})"
 
 

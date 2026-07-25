@@ -43,7 +43,7 @@ OUTPUT_DIR = TEST_DIR / "outputs"
 #  PARAMETERS TO MODIFY HERE TO CHANGE THE BOUNDARY CONDITIONS
 # ============================================================
 LEFT_BC = ("dirichlet", "rest", {})
-RIGHT_BC = ("neumann", "gaussian", {"A": 0.08, "omega": 4.5})
+RIGHT_BC = ("neumann", "gaussian", {"A": 0.08, "sigma": 0.2})
 # ============================================================
 
 

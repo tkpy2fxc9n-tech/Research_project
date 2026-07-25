@@ -57,6 +57,8 @@ def main():
                  f"training (training/code/main.py)?")
 
     cfg = Config()
+    C.check_bc_in_training_range(LEFT_BC, cfg, "left")
+    C.check_bc_in_training_range(RIGHT_BC, cfg, "right")
     print(f"=== test prediction -- left={C.bc_describe(LEFT_BC)}  right={C.bc_describe(RIGHT_BC)} ===")
 
     INPUTS = C.make_feature_columns(INPUT_FIELDS, cfg)
