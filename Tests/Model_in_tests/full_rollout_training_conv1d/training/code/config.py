@@ -31,8 +31,8 @@ class Config:
     M_BACK: int = 2
     N_FWD: int = 2
 
-    AMP_MIN: float = 0.0005
-    AMP_MAX: float = 0.005
+    AMP_MIN: float = 0.01
+    AMP_MAX: float = 0.20
     OMEGA_MIN: float = 0.05
     OMEGA_MAX: float = 0.5
 
