@@ -14,7 +14,9 @@
 #      du-dx / Velocity-integrated), uniformly,
 #   2. a REST pattern: which end(s), if any, stay at 0 the whole run
 #      instead of being driven,
-#   3. a FUNCTION family used to drive whichever end(s) end up driven,
+#   3. a FUNCTION family for each end that's driven, drawn independently
+#      for the left and right ends (so e.g. a chirp on one side and a
+#      shock on the other is possible),
 #   4. a train/val/test SPLIT label,
 #   5. an INITIAL STATE: the beam's shape/speed at t=0 -- not always flat
 #      at rest, so the dataset also covers the in-between states a
@@ -298,22 +300,25 @@ def run_simulation(bc_left, bc_right, cfg, u0=None, v0=None):
 
 def sample_boundary_pair(rng, cfg):
     # One random (left, right) boundary condition pair: TYPE (uniform),
-    # REST pattern (weighted), and FUNCTION family (weighted, shared by
-    # both ends) -- sections 1-3 of the CONFIGURATION above. Returns
-    # everything run_simulation needs (bc_left, bc_right) plus the labels
-    # main() saves (left_name, right_name, family).
+    # REST pattern (weighted), and FUNCTION family (weighted, drawn
+    # independently for each end -- so e.g. a chirp on the left and a
+    # shock on the right is possible) -- sections 1-3 of the CONFIGURATION
+    # above. Returns everything run_simulation needs (bc_left, bc_right)
+    # plus the labels main() saves (left_name, right_name, left_family,
+    # right_family).
     left_opt = BC_OPTIONS[rng.integers(len(BC_OPTIONS))]
     right_opt = BC_OPTIONS[rng.integers(len(BC_OPTIONS))]
     rest_pattern = rng.choice(list(REST_SHARES), p=list(REST_SHARES.values()))
     left_driven, right_driven = REST_PATTERNS[rest_pattern]
-    family = rng.choice(list(FAMILY_SHARES), p=list(FAMILY_SHARES.values()))
+    left_family = rng.choice(list(FAMILY_SHARES), p=list(FAMILY_SHARES.values()))
+    right_family = rng.choice(list(FAMILY_SHARES), p=list(FAMILY_SHARES.values()))
 
-    left_params = BC_WAVEFORMS[family][0](rng, cfg) if left_driven else None
-    right_params = BC_WAVEFORMS[family][0](rng, cfg) if right_driven else None
+    left_params = BC_WAVEFORMS[left_family][0](rng, cfg) if left_driven else None
+    right_params = BC_WAVEFORMS[right_family][0](rng, cfg) if right_driven else None
 
-    bc_left = (left_opt[1], left_opt[2], left_driven, family, left_params)
-    bc_right = (right_opt[1], right_opt[2], right_driven, family, right_params)
-    return bc_left, bc_right, left_opt[0], right_opt[0], family
+    bc_left = (left_opt[1], left_opt[2], left_driven, left_family, left_params)
+    bc_right = (right_opt[1], right_opt[2], right_driven, right_family, right_params)
+    return bc_left, bc_right, left_opt[0], right_opt[0], left_family, right_family
 
 
 # --- initial states (used to seed u(x,0), v(x,0)) ---------------------------
@@ -388,7 +393,7 @@ def sample_from_simulation_state(rng, cfg):
     # pair, then take its state partway through -- the simplest way to
     # get an initial condition that looks like a real intermediate
     # rollout state, without needing to keep other trajectories around.
-    bc_left, bc_right, _, _, _ = sample_boundary_pair(rng, cfg)
+    bc_left, bc_right, _, _, _, _ = sample_boundary_pair(rng, cfg)
     donor_u, _, _ = run_simulation(bc_left, bc_right, cfg)
     n_pick = int(rng.integers(cfg.Nt // 10, cfg.Nt + 1))
     u0 = donor_u[n_pick]
@@ -421,10 +426,11 @@ def main():
     right_bc_value = np.zeros((n, cfg.Nt + 1), dtype=np.float32)
     left_label, right_label = [], []
     left_driven_flags, right_driven_flags = [], []
-    family_used, split_label, initial_state_used = [], [], []
+    left_family_used, right_family_used = [], []
+    split_label, initial_state_used = [], []
 
     for i in range(n):
-        bc_left, bc_right, left_name, right_name, family = sample_boundary_pair(rng, cfg)
+        bc_left, bc_right, left_name, right_name, left_family, right_family = sample_boundary_pair(rng, cfg)
         # rng.choice(..., p=weights) -> weighted draw, following the shares above.
         initial_state_name = rng.choice(initial_state_names, p=initial_state_weights)
         split_name = rng.choice(split_names, p=split_weights)
@@ -436,7 +442,8 @@ def main():
         right_label.append(right_name)
         left_driven_flags.append(bc_left[2])
         right_driven_flags.append(bc_right[2])
-        family_used.append(str(family))
+        left_family_used.append(str(left_family))
+        right_family_used.append(str(right_family))
         split_label.append(str(split_name))
         initial_state_used.append(str(initial_state_name))
 
@@ -457,7 +464,8 @@ def main():
         f.create_dataset("right_label", data=right_label)
         f.create_dataset("left_driven", data=left_driven_flags)
         f.create_dataset("right_driven", data=right_driven_flags)
-        f.create_dataset("family", data=family_used)
+        f.create_dataset("left_family", data=left_family_used)
+        f.create_dataset("right_family", data=right_family_used)
         f.create_dataset("split", data=split_label)
         f.create_dataset("initial_state", data=initial_state_used)
 
@@ -472,9 +480,9 @@ def main():
         print(f"  left {'driven' if ld else 'rest'} / right {'driven' if rd else 'rest'}:"
               f"  {count:4d}  ({100 * count / n:4.1f}%)")
 
-    print("\nBreakdown by family:")
-    for name, count in Counter(family_used).items():
-        print(f"  {name:20s}{count:4d}  ({100 * count / n:4.1f}%)")
+    print("\nBreakdown by family pair (left/right drawn independently):")
+    for (l, r), count in Counter(zip(left_family_used, right_family_used)).items():
+        print(f"  {l} (L) / {r} (R):  {count:4d}  ({100 * count / n:4.1f}%)")
 
     print("\nBreakdown by initial state:")
     for name, count in Counter(initial_state_used).items():
