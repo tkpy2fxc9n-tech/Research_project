@@ -2,8 +2,10 @@
 # waveform_family, params) spec, the 7 signal families this project trains
 # on (gaussian/sinusoid/rest are the generic ones also used by other
 # projects; fourier/chirp/shock/filtered_random were added specifically for
-# this project's signal-family table), and how a BC value/spec gets applied
-# to the simulation grid.
+# this project's signal-family table), an 8th "table" family for
+# pre-computed value series loaded from an external dataset (see
+# dataset.load_hdf5_dataset), and how a BC value/spec gets applied to the
+# simulation grid.
 #
 # A boundary condition is (bc_type, waveform_family, params):
 #   bc_type in {"dirichlet", "neumann"} -- Dirichlet prescribes a displacement,
@@ -150,6 +152,20 @@ def filtered_random_value(p: dict, t: float) -> float:
     return float(np.interp(t, p["t_ctrl"], p["values"]))
 
 
+# ---------------------------------------------------------------------------
+# table (arbitrary pre-computed value series, e.g. loaded from
+# Dataset/Creation_dataset.py's HDF5 output -- see dataset.load_hdf5_dataset).
+# Reuses filtered_random_value as-is: interpolating a (t_ctrl, values) series
+# is exactly what a table lookup needs, and t is always one of the series'
+# own grid points during rollout/training, so np.interp returns the stored
+# value exactly, not an approximation. No sampler: there's nothing to draw
+# at random, the values come from real data, not this project's own RNG.
+# ---------------------------------------------------------------------------
+def _no_sampler(rng, cfg) -> dict:
+    raise NotImplementedError("'table' is a load-only family (pre-computed BC value series) -- "
+                               "its params come from dataset.load_hdf5_dataset, not random sampling.")
+
+
 BC_WAVEFORMS = {
     "gaussian": (sample_gaussian_params, gaussian_value),
     "sinusoid": (sample_sinusoid_params, sinusoid_value),
@@ -158,6 +174,7 @@ BC_WAVEFORMS = {
     "chirp": (sample_chirp_params, chirp_value),
     "shock": (sample_shock_params, shock_value),
     "filtered_random": (sample_filtered_random_params, filtered_random_value),
+    "table": (_no_sampler, filtered_random_value),
 }
 
 
@@ -195,7 +212,15 @@ def bc_value(bc: BCSpec, t: float) -> float:
 
 def bc_describe(bc: BCSpec) -> str:
     bc_type, family, params = bc
-    param_str = ", ".join(f"{k}={v}" for k, v in params.items())
+    # "table" BCs carry a human-readable source_label (e.g. the original
+    # family driving that end before it was resampled into a value series,
+    # see dataset.load_hdf5_dataset) instead of dumping a Nt+1-long array.
+    if "source_label" in params:
+        return f"{bc_type}/{family}[{params['source_label']}]"
+    param_str = ", ".join(
+        f"{k}={v}" if not isinstance(v, (list, tuple)) or len(v) <= 6 else f"{k}=[{len(v)} values]"
+        for k, v in params.items()
+    )
     return f"{bc_type}/{family}({param_str})"
 
 

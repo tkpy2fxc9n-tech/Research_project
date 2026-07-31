@@ -1,0 +1,49 @@
+=====  RUN SUMMARY  =====
+
+Method          : conv1d_U_multisignal_composite_rollout_physics_data
+
+--- Environment ---
+Run timestamp   : 2026-07-30 21:24:41
+Git commit      : 8b7ad3e (+ uncommitted changes)
+Host / job      : mac-3.home / no SLURM job id (local run)
+Python / torch  : 3.11.15 / 2.12.1 (cpu)
+
+--- Configuration ---
+Grid            : Nt=500, Nx=100, SS=10, ndt=2 (dt=0.01, dx=0.0101, CFL=0.700)
+Physical        : E=1, rho=2, L=1, t_end=5
+M / N           : M_BACK=2, N_FWD=2
+Input fields    : U
+Stencil         : 21 points (SS=10 each side)
+Sampling range  : A in [0.01, 0.2], omega in [0.05, 0.5]
+Rollout BC      : left=dirichlet/sinusoid(A=0.09079343872132435, omega=0.32909605340692, phase=6.252375740920343)  right=dirichlet/gaussian(A=0.15396848060857538, sigma=0.27384021296942856)
+Smoothing/noise : SMOOTH_ALPHA=0.2, NOISE_STD=0.1
+Seeds           : SEED=0, SPLIT_SEED=42
+Dataset         : 788,800 rows
+Features        : 42 inputs, 2 output(s)
+  split train   :  690,200 rows (87.5 %)
+  split val     :   49,300 rows (6.2 %)
+  split test    :   49,300 rows (6.2 %)
+NN parameters   : 24,370
+Architecture    : ConvNet( (conv): Sequential( (0): Conv1d(2, 16, kernel_size=(5,), stride=(1,), padding=(2,)) (1): ReLU() (2): Conv1d(16, 32, kernel_size=(5,), stride=(1,), padding=(2,)) (3): ReLU() ) (head): Sequential( (0): Linear(in_features=672, out_features=32, bias=True) (1): ReLU() (2): Linear(in_features=32, out_features=2, bias=True) ) )
+Training scheme : composite: rollout (TBPTT) + physics (PDE residual) + data (one-step) -- lambdas=(rollout=1.0, physics=0.01, data=1.0)
+CLI args        : epochs=2, n_samples=16, batch_size=32, group_size=4, tbptt_hops=3, early_stop_patience=15
+Family sinusoid : L2 final=1.000e+00 max=1.065e+00 | sMAPE final=199.9% max=200.0%
+Family gaussian : L2 final=1.000e+00 max=1.117e+00 | sMAPE final=200.0% max=200.0%
+
+--- Training ---
+Learning rate   : 0.001
+Minimum val     : 9.987645e-01
+delta_u@1ndt    : MSE (norm) = 5.9790e-01 | R2 = -0.0384
+delta_u@2ndt    : MSE (norm) = 9.2997e-01 | R2 = -0.0945
+
+--- Execution time ---
+Training (2 epochs)         : 13.175 s
+Real simulation (FD, median)         : 1.931 ms
+Predicted rollout (NN, median)       : 267.784 ms  (+/-19.425)
+Speedup FD/NN                        : 0.01
+Network FLOPs (full rollout)          : 1,951,462,400
+
+--- Rollout errors ---
+L2 relative  : final = 9.9689e-01  |  max = 1.1527e+00
+Linf absolute: final = 2.2667e-01  |  max = 2.2667e-01
+sMAPE (%)    : final = 195.360  |  max = 195.360

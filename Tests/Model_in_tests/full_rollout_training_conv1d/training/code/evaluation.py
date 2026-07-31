@@ -21,7 +21,7 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 
 from waves import BCSpec, bc_describe
-from physics import biais_repos as compute_biais_repos, autoregressive_rollout, run_fd_simulation_general, FIELD_LABELS
+from physics import compute_rest_bias, autoregressive_rollout, run_fd_simulation_general, FIELD_LABELS
 from training import TrainResult
 
 
@@ -42,7 +42,7 @@ class RolloutResult:
     right_bc: "BCSpec"
 
 
-def run_rollout(modele, FIELDS: dict, bc_pairs: list[tuple[BCSpec, BCSpec]], rollout_idx: int,
+def run_rollout(model, FIELDS: dict, bc_pairs: list[tuple[BCSpec, BCSpec]], rollout_idx: int,
                 input_fields, norm_stats, INPUTS, OUTPUTS, cfg) -> RolloutResult:
     left_bc, right_bc = bc_pairs[rollout_idx]
     U_reel = FIELDS[rollout_idx]
@@ -52,9 +52,9 @@ def run_rollout(modele, FIELDS: dict, bc_pairs: list[tuple[BCSpec, BCSpec]], rol
     mu_out = norm_stats.loc[OUTPUTS, "mean"].values.astype(np.float32)
     sd_out = norm_stats.loc[OUTPUTS, "std"].values.astype(np.float32)
 
-    biais_repos = compute_biais_repos(modele, mu_in, sd_in, mu_out, sd_out, cfg)
-    U = autoregressive_rollout(modele, U_reel, input_fields, mu_in, sd_in, mu_out, sd_out,
-                                biais_repos, left_bc, right_bc, cfg)
+    rest_bias = compute_rest_bias(model, mu_in, sd_in, mu_out, sd_out, cfg)
+    U = autoregressive_rollout(model, U_reel, input_fields, mu_in, sd_in, mu_out, sd_out,
+                                rest_bias, left_bc, right_bc, cfg)
     return RolloutResult(U=U, U_reel=U_reel, left_bc=left_bc, right_bc=right_bc)
 
 
@@ -69,13 +69,13 @@ def compute_errors(rollout: RolloutResult, cfg):
     return t_axis, l2_list, linf_list, smape_list
 
 
-def chrono(fonction, n_repeat=15, n_warmup=3):
+def chrono(func, n_repeat=15, n_warmup=3):
     for _ in range(n_warmup):
-        fonction()
+        func()
     durations = []
     for _ in range(n_repeat):
         t0 = time.perf_counter()
-        fonction()
+        func()
         durations.append(time.perf_counter() - t0)
     d = np.array(durations)
     return d.mean(), d.std(), float(np.median(d))
@@ -91,7 +91,7 @@ class BenchmarkResult:
     n_calls: int
 
 
-def benchmark_inference(modele, FIELDS, input_fields, norm_stats, INPUTS, OUTPUTS,
+def benchmark_inference(model, FIELDS, input_fields, norm_stats, INPUTS, OUTPUTS,
                          rollout: RolloutResult, cfg) -> BenchmarkResult:
     left_bc, right_bc, U_reel = rollout.left_bc, rollout.right_bc, rollout.U_reel
 
@@ -99,14 +99,14 @@ def benchmark_inference(modele, FIELDS, input_fields, norm_stats, INPUTS, OUTPUT
     sd_in = norm_stats.loc[INPUTS, "std"].values.astype(np.float32)
     mu_out = norm_stats.loc[OUTPUTS, "mean"].values.astype(np.float32)
     sd_out = norm_stats.loc[OUTPUTS, "std"].values.astype(np.float32)
-    biais_repos = compute_biais_repos(modele, mu_in, sd_in, mu_out, sd_out, cfg)
+    rest_bias = compute_rest_bias(model, mu_in, sd_in, mu_out, sd_out, cfg)
 
     def fd_once():
         return run_fd_simulation_general(left_bc, right_bc, cfg)
 
     def rollout_once():
-        return autoregressive_rollout(modele, U_reel, input_fields, mu_in, sd_in, mu_out, sd_out,
-                                       biais_repos, left_bc, right_bc, cfg)
+        return autoregressive_rollout(model, U_reel, input_fields, mu_in, sd_in, mu_out, sd_out,
+                                       rest_bias, left_bc, right_bc, cfg)
 
     fd_mean, fd_std, fd_med = chrono(fd_once)
     nn_mean, nn_std, nn_med = chrono(rollout_once)
@@ -116,7 +116,7 @@ def benchmark_inference(modele, FIELDS, input_fields, norm_stats, INPUTS, OUTPUT
 
     from torch.utils.flop_counter import FlopCounterMode
     with FlopCounterMode(display=False) as fc:
-        modele(torch.zeros((len(cfg.nodes), n_features)))
+        model(torch.zeros((len(cfg.nodes), n_features)))
     flops_per_call = fc.get_total_flops() * n_calls
 
     print(f"FD (real)   : {fd_med*1e3:7.3f} ms")
@@ -161,42 +161,56 @@ def make_rollout_animation(rollout: RolloutResult, cfg, output_dir: Path):
 
     fig_anim, (axA, axB) = plt.subplots(2, 1, figsize=(9, 7), sharex=True)
 
-    ligne_reel, = axA.plot([], [], "r", lw=2, label="real")
-    ligne_pred, = axA.plot([], [], "b--", lw=2, label="predicted")
+    line_real, = axA.plot([], [], "r", lw=2, label="real")
+    line_pred, = axA.plot([], [], "b--", lw=2, label="predicted")
     ymax = np.abs(U_reel[:, nodes]).max() * 1.2
     axA.set_xlim(0, cfg.L); axA.set_ylim(-ymax, ymax)
     axA.set_ylabel("u"); axA.legend(loc="upper right"); axA.grid(True)
 
-    ligne_err, = axB.plot([], [], "k", lw=1.5, label="|predicted - real|")
+    line_err, = axB.plot([], [], "k", lw=1.5, label="|predicted - real|")
     err_max = max(np.max([np.abs(U[m, nodes] - U_reel[m, nodes]).max() for m in frames]) * 1.2, 1e-9)
     axB.set_xlim(0, cfg.L); axB.set_ylim(0, err_max)
     axB.set_xlabel("x"); axB.set_ylabel("absolute error"); axB.legend(loc="upper right"); axB.grid(True)
 
-    titre = fig_anim.suptitle("")
+    title_obj = fig_anim.suptitle("")
 
-    def maj(m):
-        ligne_reel.set_data(x, U_reel[m, nodes])
-        ligne_pred.set_data(x, U[m, nodes])
-        ligne_err.set_data(x, np.abs(U[m, nodes] - U_reel[m, nodes]))
-        titre.set_text(f"Wave propagation — t = {m*cfg.dt:.3f}  (step {m})")
-        return ligne_reel, ligne_pred, ligne_err, titre
+    def update(m):
+        line_real.set_data(x, U_reel[m, nodes])
+        line_pred.set_data(x, U[m, nodes])
+        line_err.set_data(x, np.abs(U[m, nodes] - U_reel[m, nodes]))
+        title_obj.set_text(f"Wave propagation — t = {m*cfg.dt:.3f}  (step {m})")
+        return line_real, line_pred, line_err, title_obj
 
-    anim = animation.FuncAnimation(fig_anim, maj, frames=frames, interval=50, blit=False)
+    anim = animation.FuncAnimation(fig_anim, update, frames=frames, interval=50, blit=False)
     anim.save(output_dir / "propagation_onde.gif", writer="pillow", fps=20, dpi=110)
     plt.close(fig_anim)
+
+
+def compute_utt_uxx(u_prev: np.ndarray, u_curr: np.ndarray, u_next: np.ndarray, dt_eff: float, cfg) -> tuple:
+    # u_tt/u_xx at u_curr from a 3-point stencil (u_prev, u_curr, u_next),
+    # dt_eff apart in physical time -- dt_eff=cfg.dt for consecutive raw
+    # ground-truth steps, cfg.ndt*cfg.dt for a rollout's ndt-spaced steps
+    # (the network only ever predicts every ndt-th step). Full-width
+    # (Ntot,) arrays, zero outside i_left:i_right+1, same padding
+    # convention as physics.uxx_field. Shared reference for plot_utt_uxx
+    # below and for rollout_torch.utt_uxx_torch's differentiable port.
+    i_left, i_right = cfg.i_left, cfg.i_right
+    u_tt = np.zeros(cfg.Ntot)
+    u_xx = np.zeros(cfg.Ntot)
+    u_tt[i_left:i_right+1] = (u_next[i_left:i_right+1] - 2*u_curr[i_left:i_right+1] + u_prev[i_left:i_right+1]) / dt_eff**2
+    u_xx[i_left:i_right+1] = (u_curr[i_left-1:i_right] - 2*u_curr[i_left:i_right+1] + u_curr[i_left+1:i_right+2]) / cfg.dx**2
+    return u_tt, u_xx
 
 
 def plot_utt_uxx(rollout: RolloutResult, cfg, output_dir: Path):
     # PDE check: u_tt as a function of u_xx, real then predicted.
     U, U_reel = rollout.U, rollout.U_reel
     i_left, i_right = cfg.i_left, cfg.i_right
-    dt, dx, ndt, Nt, Ntot = cfg.dt, cfg.dx, cfg.ndt, cfg.Nt, cfg.Ntot
+    dt, ndt, Nt, Ntot = cfg.dt, cfg.ndt, cfg.Nt, cfg.Ntot
 
     ureel_tt = np.zeros((Nt, Ntot)); ureel_xx = np.zeros((Nt, Ntot))
     for n in range(1, Nt):
-        u_prev, u_curr, u_next = U_reel[n-1], U_reel[n], U_reel[n+1]
-        ureel_tt[n, i_left:i_right+1] = (u_next[i_left:i_right+1] - 2*u_curr[i_left:i_right+1] + u_prev[i_left:i_right+1]) / dt**2
-        ureel_xx[n, i_left:i_right+1] = (u_curr[i_left-1:i_right] - 2*u_curr[i_left:i_right+1] + u_curr[i_left+1:i_right+2]) / dx**2
+        ureel_tt[n], ureel_xx[n] = compute_utt_uxx(U_reel[n-1], U_reel[n], U_reel[n+1], dt, cfg)
 
     snaps_reel = sorted({int(np.clip(round(frac * Nt), 1, Nt - 1)) for frac in (0.1, 0.2, 0.4)})
     plt.figure()
@@ -210,9 +224,7 @@ def plot_utt_uxx(rollout: RolloutResult, cfg, output_dir: Path):
 
     upred_tt = np.zeros((Nt, Ntot)); upred_xx = np.zeros((Nt, Ntot))
     for n in range(ndt, Nt - ndt + 1, ndt):
-        u_prev, u_curr, u_next = U[n-ndt], U[n], U[n+ndt]
-        upred_tt[n, i_left:i_right+1] = (u_next[i_left:i_right+1] - 2*u_curr[i_left:i_right+1] + u_prev[i_left:i_right+1]) / (ndt*dt)**2
-        upred_xx[n, i_left:i_right+1] = (u_curr[i_left-1:i_right] - 2*u_curr[i_left:i_right+1] + u_curr[i_left+1:i_right+2]) / dx**2
+        upred_tt[n], upred_xx[n] = compute_utt_uxx(U[n-ndt], U[n], U[n+ndt], ndt*dt, cfg)
 
     n_max_pred = ((Nt - ndt) // ndt) * ndt
     snaps_pred = sorted({int(np.clip(round(frac * Nt / ndt) * ndt, ndt, n_max_pred)) for frac in (0.01, 0.2, 0.3)})
@@ -302,13 +314,13 @@ def export_resume(output_dir: Path, cfg, method_name: str, df: pd.DataFrame, INP
 
         f.write("--- Training ---\n")
         f.write(f"Learning rate   : {cfg.LEARNING_RATE:g}\n")
-        f.write(f"Minimum val     : {train_result.meilleure_val:.6e}\n")
+        f.write(f"Minimum val     : {train_result.best_val:.6e}\n")
         for col, m in tf_metrics.items():
             f.write(f"{col:15s} : MSE (norm) = {m['mse_norm']:.4e} | R2 = {m['r2']:.4f}\n")
         f.write("\n")
 
         f.write("--- Execution time ---\n")
-        n_epochs_run = len(train_result.historique_train)
+        n_epochs_run = len(train_result.train_history)
         epochs_label = (f"{n_epochs_run} epochs" if n_epochs_run == cfg.N_EPOCHS
                         else f"{n_epochs_run}/{cfg.N_EPOCHS} epochs, early stopped")
         f.write(f"Training ({epochs_label})         : {train_result.train_time_s:.3f} s\n")

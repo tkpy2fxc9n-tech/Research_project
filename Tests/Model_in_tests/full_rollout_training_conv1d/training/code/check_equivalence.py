@@ -9,9 +9,9 @@
 # investing compute time in a training run.
 #
 # Config() is built with its own (already project-specific) defaults from
-# config.py -- M_BACK=4 etc. are the real defaults now, not a generic-project
-# Config() overridden at the call site, so this exercises the exact
-# hyperparameters training will use with a plain Config().
+# config.py, not a generic-project Config() overridden at the call site, so
+# this exercises the exact hyperparameters training will use with a plain
+# Config().
 import sys
 from pathlib import Path
 
@@ -23,12 +23,11 @@ sys.path.insert(0, str(SCRIPT_DIR))
 from config import Config, set_seeds
 from rollout_torch import build_window_torch, reconstruct_torch_general
 from main import INPUT_FIELDS
-from model import ReseauConv
+from model import ConvNet
 import waves
 import scenarios
 from physics import (make_feature_columns, make_output_columns, run_fd_simulation_general,
-                      run_fd_simulation_free, reconstruct_general, build_window,
-                      biais_repos as compute_biais_repos)
+                      run_fd_simulation_free, reconstruct_general, build_window, compute_rest_bias)
 
 N_HOPS_TEST = 2
 TOLERANCE = 1e-4
@@ -68,7 +67,7 @@ def build_test_cases(cfg):
     ]
 
 
-def run_case(cfg, modele, input_fields, mu_in, sd_in, mu_out, sd_out, biais_repos,
+def run_case(cfg, model, input_fields, mu_in, sd_in, mu_out, sd_out, rest_bias,
              bc_left, bc_right, U_reel=None):
     if U_reel is None:
         U_reel = run_fd_simulation_general(bc_left, bc_right, cfg)
@@ -82,16 +81,16 @@ def run_case(cfg, modele, input_fields, mu_in, sd_in, mu_out, sd_out, biais_repo
         m_list = [n - lag * cfg.ndt for lag in range(cfg.M_BACK)]
         X = (build_window(m_list, lambda m: U_ref[m], input_fields, cfg) - mu_in) / sd_in
         with torch.no_grad():
-            sortie = modele(torch.tensor(X)).numpy()
-        champs = reconstruct_general(U_ref[n], n, sortie, bc_left, bc_right, mu_out, sd_out, cfg,
-                                        biais_repos=biais_repos)
-        for s, u in champs.items():
+            pred_norm = model(torch.tensor(X)).numpy()
+        states = reconstruct_general(U_ref[n], n, pred_norm, bc_left, bc_right, mu_out, sd_out, cfg,
+                                      rest_bias=rest_bias)
+        for s, u in states.items():
             U_ref[s] = u
 
     # --- Torch version (rollout_torch.py), same hops, group of size 1 ---
     mu_in_t, sd_in_t = torch.tensor(mu_in), torch.tensor(sd_in)
     mu_out_t, sd_out_t = torch.tensor(mu_out), torch.tensor(sd_out)
-    biais_repos_t = torch.tensor(biais_repos)
+    rest_bias_t = torch.tensor(rest_bias)
 
     history = [torch.tensor(U_reel[history_needed - lag * cfg.ndt][None, :], dtype=torch.float32)
                for lag in range(cfg.M_BACK, -1, -1)]
@@ -99,9 +98,9 @@ def run_case(cfg, modele, input_fields, mu_in, sd_in, mu_out, sd_out, biais_repo
     with torch.no_grad():
         for n in range(history_needed, n_stop, cfg.N_FWD * cfg.ndt):
             X = (build_window_torch(history, input_fields, cfg) - mu_in_t) / sd_in_t
-            pred_norm = modele(X)
+            pred_norm = model(X)
             new_states, _ = reconstruct_torch_general(history[-1], pred_norm, [bc_left], [bc_right], n,
-                                                        mu_out_t, sd_out_t, biais_repos_t, cfg)
+                                                        mu_out_t, sd_out_t, rest_bias_t, cfg)
             history = history[cfg.N_FWD:] + new_states
 
     U_torch_final = history[-1][0].numpy()
@@ -117,9 +116,9 @@ def main():
     INPUTS = make_feature_columns(input_fields, cfg)
     OUTPUTS = make_output_columns(cfg)
 
-    modele = ReseauConv(n_lags=cfg.M_BACK, n_points=2 * cfg.SS + 1,
-                        n_fields=len(input_fields), n_outputs=len(OUTPUTS))
-    modele.eval()
+    model = ConvNet(n_lags=cfg.M_BACK, n_points=2 * cfg.SS + 1,
+                     n_fields=len(input_fields), n_outputs=len(OUTPUTS))
+    model.eval()
 
     # Fake normalization stats (just need std != 0) -- this script only
     # tests the fidelity of the physical reconstruction, not real dataset stats.
@@ -127,11 +126,11 @@ def main():
     sd_in = np.ones(len(INPUTS), dtype=np.float32)
     mu_out = np.zeros(len(OUTPUTS), dtype=np.float32)
     sd_out = np.ones(len(OUTPUTS), dtype=np.float32)
-    biais_repos = compute_biais_repos(modele, mu_in, sd_in, mu_out, sd_out, cfg)
+    rest_bias = compute_rest_bias(model, mu_in, sd_in, mu_out, sd_out, cfg)
 
     all_ok = True
     for name, bc_left, bc_right in build_test_cases(cfg):
-        gap = run_case(cfg, modele, input_fields, mu_in, sd_in, mu_out, sd_out, biais_repos, bc_left, bc_right)
+        gap = run_case(cfg, model, input_fields, mu_in, sd_in, mu_out, sd_out, rest_bias, bc_left, bc_right)
         status = "OK" if gap < TOLERANCE else "FAILED"
         if gap >= TOLERANCE:
             all_ok = False
@@ -144,7 +143,7 @@ def main():
     u0 = scenarios.sample_random_ic(rng, cfg)
     rest = ("dirichlet", "rest", {"ic": "random"})
     U_reel_free = run_fd_simulation_free(rest, rest, u0, cfg)
-    gap = run_case(cfg, modele, input_fields, mu_in, sd_in, mu_out, sd_out, biais_repos,
+    gap = run_case(cfg, model, input_fields, mu_in, sd_in, mu_out, sd_out, rest_bias,
                     rest, rest, U_reel=U_reel_free)
     status = "OK" if gap < TOLERANCE else "FAILED"
     if gap >= TOLERANCE:

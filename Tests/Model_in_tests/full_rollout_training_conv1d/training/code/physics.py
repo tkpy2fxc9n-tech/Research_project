@@ -122,14 +122,14 @@ def run_fd_simulation_free(bc_left: BCSpec, bc_right: BCSpec, u0_profile: np.nda
 
 
 def reconstruct_general(u_curr, n_curr, pred_norm, bc_left: BCSpec, bc_right: BCSpec, mu_out, sd_out,
-                         cfg, biais_repos: np.ndarray | None = None) -> dict:
+                         cfg, rest_bias: np.ndarray | None = None) -> dict:
     # Numpy reference reconstruction -- used directly by check_equivalence.py
     # to validate rollout_torch.py's differentiable torch port.
     deltas = pred_norm * sd_out + mu_out
-    if biais_repos is not None:
-        deltas = deltas - biais_repos
+    if rest_bias is not None:
+        deltas = deltas - rest_bias
     nodes = cfg.nodes
-    champs = {}
+    states = {}
     for h in range(1, cfg.N_FWD + 1):
         s = n_curr + h * cfg.ndt
         t = s * cfg.dt
@@ -140,20 +140,20 @@ def reconstruct_general(u_curr, n_curr, pred_norm, bc_left: BCSpec, bc_right: BC
             j0, j1 = cfg.i_left + 1, cfg.i_right
             lap = u[j0-1:j1-1] - 2*u[j0:j1] + u[j0+1:j1+1]
             u[j0:j1] += cfg.SMOOTH_ALPHA * lap
-        champs[s] = u
-    return champs
+        states[s] = u
+    return states
 
 
-def biais_repos(modele, mu_in, sd_in, mu_out, sd_out, cfg):
+def compute_rest_bias(model, mu_in, sd_in, mu_out, sd_out, cfg):
     # Network output for a zero input, subtracted from the rollout so the
     # resting zone stays at 0.
     Xz = (np.zeros((len(cfg.nodes), len(mu_in)), dtype=np.float32) - mu_in) / sd_in
     with torch.no_grad():
-        return (modele(torch.tensor(Xz)).numpy() * sd_out + mu_out)[0]
+        return (model(torch.tensor(Xz)).numpy() * sd_out + mu_out)[0]
 
 
-def autoregressive_rollout(modele, U_reel, input_fields, mu_in, sd_in, mu_out, sd_out,
-                            biais_repos, bc_left: BCSpec, bc_right: BCSpec, cfg) -> np.ndarray:
+def autoregressive_rollout(model, U_reel, input_fields, mu_in, sd_in, mu_out, sd_out,
+                            rest_bias, bc_left: BCSpec, bc_right: BCSpec, cfg) -> np.ndarray:
     history_needed = cfg.M_BACK * cfg.ndt
     U = np.zeros((cfg.Nt + 1, cfg.Ntot))
     for m in range(history_needed + 1):
@@ -163,8 +163,8 @@ def autoregressive_rollout(modele, U_reel, input_fields, mu_in, sd_in, mu_out, s
         m_list = [n - lag*cfg.ndt for lag in range(cfg.M_BACK)]
         X = (build_window(m_list, lambda m: U[m], input_fields, cfg) - mu_in) / sd_in
         with torch.no_grad():
-            sortie = modele(torch.tensor(X)).numpy()
-        deltas = sortie * sd_out + mu_out - biais_repos
+            pred_norm = model(torch.tensor(X)).numpy()
+        deltas = pred_norm * sd_out + mu_out - rest_bias
 
         for h in range(1, cfg.N_FWD + 1):
             s = n + h*cfg.ndt
