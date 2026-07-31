@@ -1,0 +1,1 @@
+Ce code servait à tester un CNN sur la beam entière, mais mon intérêt à moi est de tester un réseau local, pas global.

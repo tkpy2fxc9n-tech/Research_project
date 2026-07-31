@@ -39,13 +39,16 @@ export VECLIB_MAXIMUM_THREADS=1
 
 PYTHON=/home/aph25/Desktop/wave_env/bin/python
 
-# main.py now trains with plain one-step (teacher-forcing) batches instead
-# of the old autoregressive full-rollout + TBPTT scheme, so --tbptt-hops/
-# --group-size no longer exist -- --batch-size (default: Config.BATCH_SIZE)
-# replaces them as the per-update knob. epochs=60 (down from 300): early
-# stopping (--early-stop-patience, default 15) will usually cut this short
-# anyway, but caps the worst case now that each epoch is cheap batched
-# training rather than an autoregressive rollout.
+# main.py now trains with a composite loss (rollout TBPTT + physics
+# residual + one-step data, see train.py) -- --group-size/--tbptt-hops/
+# --lambda-data/--lambda-physics/--lambda-rollout are all real flags again,
+# left at their Config defaults below (no override passed). Early stopping
+# (--early-stop-patience, default 15) caps the worst case.
+#
+# NOTE: --time above was tuned for the earlier plain one-step scheme, which
+# was much cheaper per epoch than this composite scheme's full autoregressive
+# rollout -- re-time a real run (or extrapolate from --smoke-test's reported
+# per-group seconds) before trusting this budget on the cluster.
 time "$PYTHON" -u code/main.py
 
 echo "FULL_ROLLOUT_TRAINING_CONV1D JOB DONE"

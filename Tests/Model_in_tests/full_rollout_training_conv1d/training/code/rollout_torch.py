@@ -110,7 +110,7 @@ def apply_boundary_conditions_torch(u: torch.Tensor, t: float, bc_left_list, bc_
 def reconstruct_torch_general(baseline: torch.Tensor, pred_norm: torch.Tensor,
                                bc_left_list, bc_right_list, n_curr: int,
                                mu_out_t: torch.Tensor, sd_out_t: torch.Tensor,
-                               biais_repos_t: torch.Tensor | None, cfg: "Config") -> tuple[list[torch.Tensor], list[int]]:
+                               rest_bias_t: torch.Tensor | None, cfg: "Config") -> tuple[list[torch.Tensor], list[int]]:
     # baseline: (G, Ntot), state BEFORE this hop -- fixed for all h (don't
     # chain h=1 into h=2, like physics.reconstruct_general).
     # pred_norm: (G*Nx, N_FWD), raw network output for this hop.
@@ -121,8 +121,8 @@ def reconstruct_torch_general(baseline: torch.Tensor, pred_norm: torch.Tensor,
 
     pred_norm = pred_norm.reshape(G, Nx, cfg.N_FWD)
     deltas = pred_norm * sd_out_t + mu_out_t
-    if biais_repos_t is not None:
-        deltas = deltas - biais_repos_t
+    if rest_bias_t is not None:
+        deltas = deltas - rest_bias_t
 
     new_states, s_list = [], []
     for h in range(1, cfg.N_FWD + 1):
@@ -152,3 +152,34 @@ def reconstruct_torch_general(baseline: torch.Tensor, pred_norm: torch.Tensor,
         s_list.append(s)
 
     return new_states, s_list
+
+
+def utt_uxx_torch(u_prev: torch.Tensor, u_curr: torch.Tensor, u_next: torch.Tensor,
+                   dt_eff: float, cfg: "Config") -> tuple[torch.Tensor, torch.Tensor]:
+    # u_prev/u_curr/u_next: (G, Ntot), three consecutive snapshots dt_eff
+    # apart in physical time (dt_eff = cfg.dt for raw ground-truth steps, or
+    # cfg.ndt*cfg.dt for the ndt-spaced steps a rollout hop actually
+    # produces). Differentiable torch port of evaluation.compute_utt_uxx's
+    # formula -- u_xx is uxx_field_torch reused as-is, u_tt is the analogous
+    # temporal 3-point stencil, both zero-padded outside i_left:i_right+1.
+    i_left, i_right = cfg.i_left, cfg.i_right
+    G = u_curr.shape[0]
+    interior = (u_next[:, i_left:i_right + 1] - 2 * u_curr[:, i_left:i_right + 1]
+                + u_prev[:, i_left:i_right + 1]) / dt_eff ** 2
+    left_pad = torch.zeros(G, i_left, dtype=u_curr.dtype)
+    right_pad = torch.zeros(G, cfg.Ntot - (i_right + 1), dtype=u_curr.dtype)
+    u_tt = torch.cat([left_pad, interior, right_pad], dim=1)
+    u_xx = uxx_field_torch(u_curr, cfg)
+    return u_tt, u_xx
+
+
+def pde_residual_torch(u_prev: torch.Tensor, u_curr: torch.Tensor, u_next: torch.Tensor,
+                        dt_eff: float, cfg: "Config") -> torch.Tensor:
+    # u_tt - (E/rho)*u_xx : should be ~0 wherever the triple is a genuine,
+    # physically-consistent wave-equation solution. Full (G, Ntot) width --
+    # callers must slice to the trusted node range (i_left+1:i_right, not
+    # cfg.nodes) before reducing to a scalar loss: a Dirichlet BC can
+    # directly overwrite u at i_left (or i_right), so u_tt there reflects
+    # the forcing function, not the PDE -- see waves.apply_boundary.
+    u_tt, u_xx = utt_uxx_torch(u_prev, u_curr, u_next, dt_eff, cfg)
+    return u_tt - (cfg.E / cfg.rho) * u_xx

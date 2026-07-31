@@ -1,6 +1,6 @@
 # Standalone correctness check for model.reshape_to_channels: builds a fake
 # 126-value input where every number IS its own (lag, k, field) address, runs
-# it through the exact reshape/permute code path used by ReseauConv.forward,
+# it through the exact reshape/permute code path used by ConvNet.forward,
 # and asserts every value lands at the channel/position matching its own
 # address. Run this before trusting anything trained with model.py:
 #   python test_reshape.py
