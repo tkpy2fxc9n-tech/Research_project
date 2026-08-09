@@ -117,7 +117,7 @@ def evaluate_val_rollout(modele, FIELDS, idx_val, bc_pairs, input_fields, norm_s
 
 
 def train_full_rollout(modele, FIELDS, bc_pairs, idx_train, idx_val, input_fields,
-                        norm_stats, INPUTS, OUTPUTS, cfg: "C.Config", group_size: int,
+                       norm_stats, INPUTS, OUTPUTS, cfg: "C.Config", group_size: int,
                         n_epochs: int, model_path: Path, tbptt_hops: int = 10) -> "C.TrainResult":
     criterion = nn.MSELoss()
     optimiseur = torch.optim.Adam(modele.parameters(), lr=cfg.LEARNING_RATE)

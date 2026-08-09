@@ -1,0 +1,1 @@
+Le surrogate utilisé ici n'est entraîné que sur des ondes gaussiennes, rien d'autre.
