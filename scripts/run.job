@@ -1,0 +1,36 @@
+#!/bin/bash
+# One parametrized Slurm job, replacing the 4 separate .job files each old
+# project directory used to carry (one per project, each with its own
+# copy-pasted absolute path). Usage:
+#   sbatch scripts/run.job configs/runs/<run_id>.yaml
+#
+# Assumes: (1) this repo is checked out at REPO_ROOT below (update it to
+# match your cluster home), (2) `pip install -e .` has been run once inside
+# PYTHON's venv so `python -m beamsurrogate` resolves.
+#SBATCH --job-name=beamsurrogate
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=8
+#SBATCH --mem=16G
+#SBATCH --time=02:00:00
+#SBATCH --output=logs/%x_%j.log
+#SBATCH --error=logs/%x_%j.err
+#SBATCH --partition=short
+set -euo pipefail
+
+REPO_ROOT="/home/aph25/Code_GH"     # <-- update to this repo's actual path on the cluster
+cd "$REPO_ROOT"
+mkdir -p logs
+find logs -maxdepth 1 -type f ! -name "*${SLURM_JOB_ID}*" -delete
+
+export OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 NUMEXPR_NUM_THREADS=1 VECLIB_MAXIMUM_THREADS=1
+PYTHON=/home/aph25/Desktop/wave_env/bin/python
+
+if [[ $# -lt 1 ]]; then
+    echo "Usage: sbatch scripts/run.job configs/runs/<run_id>.yaml" >&2
+    exit 1
+fi
+CONFIG="$1"
+
+time "$PYTHON" -u -m beamsurrogate --config "$CONFIG"
+echo "RUN DONE: $CONFIG"

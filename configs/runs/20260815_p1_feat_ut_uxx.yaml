@@ -1,0 +1,5 @@
+inherit: base
+run_id: 20260815_p1_feat_ut_uxx
+phase: 1
+hypothesis: H4
+features: [Ut, Uxx]

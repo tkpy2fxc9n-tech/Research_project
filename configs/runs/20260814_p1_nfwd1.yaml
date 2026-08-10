@@ -1,0 +1,5 @@
+inherit: base
+run_id: 20260814_p1_nfwd1
+phase: 1
+hypothesis: H3
+N_FWD: 1

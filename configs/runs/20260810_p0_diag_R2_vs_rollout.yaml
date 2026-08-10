@@ -1,0 +1,10 @@
+inherit: base
+run_id: 20260810_p0_diag_R2_vs_rollout
+phase: 0
+hypothesis: H1
+# Analysis only, no model of its own -- a post-processing pass over
+# runs/20260810_p0_baseline (its model.pth + metrics.json), not something
+# `python -m beamsurrogate --config <this file>` trains. Kept as a config
+# for identity/bookkeeping (run_id/phase/hypothesis) so its eventual output
+# has a runs/<run_id>/ folder like every other run, per the project's run
+# contract.
