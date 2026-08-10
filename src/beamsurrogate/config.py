@@ -112,7 +112,7 @@ def config_to_dict(cfg: Config) -> dict:
     # could have written in a run YAML, plus the informative scalar derived
     # quantities (dt/dx/CFL), but not `nodes` (a numpy array).
     d = {f.name: getattr(cfg, f.name) for f in fields(cfg)}
-    d["dt"], d["dx"], d["CFL"] = cfg.dt, cfg.dx, cfg.CFL
+    d["dt"], d["dx"], d["CFL"] = float(cfg.dt), float(cfg.dx), float(cfg.CFL)
     for k in ("HIDDEN_SIZES", "CNN_CHANNELS"):
         d[k] = list(d[k])
     return d
