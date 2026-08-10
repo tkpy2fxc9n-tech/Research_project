@@ -5,3 +5,10 @@ __pycache__/
 outputs/
 *.pth
 *.pt
+
+# beamsurrogate campaign layout
+*.egg-info/
+/data/
+/runs/
+/figures/
+
