@@ -1,0 +1,66 @@
+#!/bin/bash
+#SBATCH --job-name=full_rollout_multisignal
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=64
+#SBATCH --mem=128G
+#SBATCH --time=14:00:00
+#SBATCH --output=logs/full_rollout_multisignal_%j.log
+#SBATCH --error=logs/full_rollout_multisignal_%j.err
+#SBATCH --partition=medium
+
+set -euo pipefail
+
+# To be launched from training/ (cd Model_in_tests/full_rollout_training_multisignal/training &&
+# sbatch code/full_rollout_training_multisignal.job) -- logs/ above and
+# mkdir -p logs below are therefore relative to training/, consistent with the
+# training/{code,logs,plots} structure. code/ contains main.py (plots ->
+# training/plots/simulation_<day>/, model -> full_rollout_training_multisignal/model.pth,
+# see PLOTS_DIR/PROJECT_DIR in main.py).
+cd /home/aph25/Tests_archives/Model_in_tests/full_rollout_training_multisignal/training
+
+# logs/ must exist BEFORE Slurm starts the job (the --output/--error paths
+# above are opened as soon as it launches, before the first line of the
+# script) -- already created, but recreated here in case the folder was
+# deleted between two runs.
+mkdir -p logs
+# Cleans up logs from previous runs (without touching those of the current
+# job, already opened by Slurm at launch).
+find logs -maxdepth 1 -type f ! -name "*${SLURM_JOB_ID}*" -delete
+
+# 1 thread per process: dataset_multisignal.generate_dataset_multisignal
+# spreads the FD simulations across the allocated cpus via
+# ProcessPoolExecutor -- a higher OMP_NUM_THREADS would oversubscribe the
+# cpus. Training itself is forced to 1 thread anyway by commun.py
+# (torch.set_num_threads(1)).
+export OMP_NUM_THREADS=1
+export MKL_NUM_THREADS=1
+export OPENBLAS_NUM_THREADS=1
+export NUMEXPR_NUM_THREADS=1
+export VECLIB_MAXIMUM_THREADS=1
+
+PYTHON=/home/aph25/Desktop/wave_env/bin/python
+
+# Before running this for real: `python code/check_equivalence.py` should
+# print all-OK first (confirms the torch training path and the numpy
+# reference path agree on all 7 signal families + the free-evolution
+# physics -- still exercised even though training itself no longer uses
+# rollout_torch.py, since check_equivalence.py validates the shared
+# reconstruction physics the evaluation-time rollout still depends on).
+# Consider a `--smoke-test` run too if this is the first run after a code
+# change.
+#
+# main.py now trains with plain one-step (teacher-forcing) batches instead
+# of the old autoregressive full-rollout + TBPTT scheme, so --tbptt-hops/
+# --group-size no longer exist -- --batch-size (default: Config.BATCH_SIZE)
+# replaces them as the per-update knob. The wall-time estimate that used to
+# justify --time=14:00:00 on the `medium` partition was based on per-hop
+# rollout cost, which no longer applies: plain batched training should be
+# substantially cheaper per epoch (no autoregressive reconstruction). Kept
+# --time/--partition unchanged here as a safe upper bound rather than
+# guessing a smaller one -- reassess (and likely shrink, possibly back down
+# to the `short` partition like the other full_rollout_training_* projects)
+# once a first run shows the real per-epoch cost.
+time "$PYTHON" -u code/main.py --epochs 300
+
+echo "FULL_ROLLOUT_TRAINING_MULTISIGNAL JOB DONE"
