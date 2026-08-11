@@ -1,0 +1,63 @@
+#!/bin/bash
+#SBATCH --job-name=suppression_hf
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=32
+#SBATCH --mem=64G
+#SBATCH --time=5:59:00
+#SBATCH --output=suppression_hf_%j.log
+#SBATCH --error=suppression_hf_%j.err
+#SBATCH --partition=short
+
+set -uo pipefail   # pas de -e : une variante qui plante ne doit pas empêcher
+                    # les autres de tourner ni l'agrégation d'être tentée
+
+cd /home/aph25/recherche/suppression_hautes_frequences
+
+PYTHON=/home/aph25/Desktop/wave_env/bin/python
+
+# 6 variantes indépendantes lancées en parallèle en tâche de fond, chacune
+# se voyant allouer une part égale des cœurs du job (évite la sursouscription
+# des 6 processus torch/numpy sur les mêmes cœurs).
+VARIANTS=(v0_baseline v1_smoothing v2_noise_injection v3_spectral_penalty v4_spectral_filter v5_pushforward)
+
+THREADS_PER_RUN=$(( SLURM_CPUS_PER_TASK / ${#VARIANTS[@]} ))
+if [ "$THREADS_PER_RUN" -lt 1 ]; then THREADS_PER_RUN=1; fi
+export OMP_NUM_THREADS="$THREADS_PER_RUN"
+export MKL_NUM_THREADS="$THREADS_PER_RUN"
+export OPENBLAS_NUM_THREADS="$THREADS_PER_RUN"
+export NUMEXPR_NUM_THREADS="$THREADS_PER_RUN"
+export VECLIB_MAXIMUM_THREADS="$THREADS_PER_RUN"
+
+mkdir -p logs
+# Nettoie les logs des runs précédents (sans toucher à ceux du job en cours,
+# déjà ouverts par Slurm au lancement).
+find logs -maxdepth 1 -type f ! -name "*${SLURM_JOB_ID}*" -delete
+
+PIDS=()
+for v in "${VARIANTS[@]}"; do
+    script="(Uxx, Ut)=>(delta_u) and ndt=5 et N et M_${v}.py"
+    echo "=== Lancement de ${v} (${script}) ==="
+    "$PYTHON" -u "$script" > "logs/run_${v}_${SLURM_JOB_ID}.log" 2>&1 &
+    PIDS+=("$!")
+done
+
+FAILED=0
+for i in "${!PIDS[@]}"; do
+    if ! wait "${PIDS[$i]}"; then
+        echo "ÉCHEC : variante ${VARIANTS[$i]} — voir logs/run_${VARIANTS[$i]}_${SLURM_JOB_ID}.log" >&2
+        FAILED=1
+    fi
+done
+
+if [ "$FAILED" -ne 0 ]; then
+    echo "Au moins une variante a échoué : l'agrégation ne portera que sur les variantes réussies (les manquantes sont ignorées avec un avertissement par compare_methodes.py)." >&2
+fi
+
+# --- Agrégation : lit outputs_<variante>/metrics.json de chaque variante --
+echo "=== Agrégation (Comparatifs/compare_methodes.py) ==="
+cd Comparatifs
+"$PYTHON" -u compare_methodes.py
+cd ..
+
+echo "SUPPRESSION_HAUTES_FREQUENCES JOB DONE"
