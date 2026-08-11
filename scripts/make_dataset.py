@@ -5,10 +5,10 @@
 # run -- you run this yourself, once, before launching any experiment.
 #
 # Usage:
-#   python scripts/make_dataset.py --profile simple  --n-trajectories 3000
-#   python scripts/make_dataset.py --profile complex --n-trajectories 3000
+#   python scripts/make_dataset.py --profile simple  --n-trajectories 2000
+#   python scripts/make_dataset.py --profile complex --n-trajectories 2000
 #
-# For a quick local check before committing to the full 3000-trajectory
+# For a quick local check before committing to the full 2000-trajectory
 # generation, pass a small --n-trajectories (e.g. 20-100) and a --output
 # pointing somewhere other than data/ -- see the smoke-test instructions in
 # the README.
@@ -39,7 +39,7 @@ def sha256_file(path: Path, chunk_size: int = 1 << 20) -> str:
 def parse_args():
     p = argparse.ArgumentParser(description="Generate one of the canonical beamsurrogate HDF5 datasets.")
     p.add_argument("--profile", choices=sorted(PROFILES), required=True)
-    p.add_argument("--n-trajectories", type=int, default=3000)
+    p.add_argument("--n-trajectories", type=int, default=2000)
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--output", type=Path, default=None,
                     help=f"Default: {DATA_DIR}/beam_dataset_<profile>.h5")

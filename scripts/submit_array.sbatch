@@ -9,11 +9,11 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
-#SBATCH --mem=16G
-#SBATCH --time=02:00:00
+#SBATCH --mem=96G
+#SBATCH --time=20:00:00
 #SBATCH --output=logs/%x_%A_%a.log
 #SBATCH --error=logs/%x_%A_%a.err
-#SBATCH --partition=short
+#SBATCH --partition=medium
 #SBATCH --array=0-16
 set -euo pipefail
 
@@ -24,7 +24,10 @@ mkdir -p logs
 CONFIGS=(configs/runs/*.yaml)
 CONFIG="${CONFIGS[$SLURM_ARRAY_TASK_ID]}"
 
-export OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 NUMEXPR_NUM_THREADS=1 VECLIB_MAXIMUM_THREADS=1
+# Matches --cpus-per-task above (NOT 1) -- see run.job's comment: torch's
+# intra-op matmul threading gives a real speedup at the full dataset's
+# batch size, on a job that owns its whole Slurm allocation.
+export OMP_NUM_THREADS=8 MKL_NUM_THREADS=8 OPENBLAS_NUM_THREADS=8 NUMEXPR_NUM_THREADS=8 VECLIB_MAXIMUM_THREADS=8
 PYTHON=/home/aph25/Desktop/wave_env/bin/python
 
 echo "Array task $SLURM_ARRAY_TASK_ID -> $CONFIG"

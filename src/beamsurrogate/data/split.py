@@ -56,24 +56,23 @@ def _reconstruct_full_state(u_nx: np.ndarray, left_values: np.ndarray, right_val
     return u_full
 
 
-def _window_trajectory(idx, u_storage, input_fields, cfg, INPUTS, OUTPUTS) -> pd.DataFrame:
+def _window_trajectory_into(u_storage, input_fields, cfg, n_list, X_out: np.ndarray, Y_out: np.ndarray) -> None:
+    # Fills X_out (rows_per_traj, len(INPUTS)) and Y_out (rows_per_traj,
+    # len(OUTPUTS)) in place -- these are views into one big pre-allocated
+    # array covering every trajectory (see load_hdf5_dataset), not a
+    # standalone array. Row order is (n_step, node), must match
+    # n_step_all's np.repeat(n_list, n_nodes) below. Filling in place instead
+    # of returning a fresh per-trajectory DataFrame avoids ever holding both
+    # the per-trajectory tables AND their pd.concat'd combination in memory
+    # at once.
     nodes = cfg.nodes
-    n_list = list(range(cfg.M_BACK * cfg.ndt, cfg.Nt - cfg.N_FWD * cfg.ndt + 1))
-
-    X = np.zeros((len(n_list), len(nodes), len(INPUTS)), dtype=np.float32)
-    Y = np.zeros((len(n_list), len(nodes), len(OUTPUTS)), dtype=np.float32)
+    n_nodes = len(nodes)
     for i, n in enumerate(n_list):
         m_list = [n - lag * cfg.ndt for lag in range(cfg.M_BACK)]
-        X[i] = build_window(m_list, lambda m: u_storage[m], input_fields, cfg)
+        row0 = i * n_nodes
+        X_out[row0:row0 + n_nodes] = build_window(m_list, lambda m: u_storage[m], input_fields, cfg)
         for h in range(1, cfg.N_FWD + 1):
-            Y[i, :, h - 1] = u_storage[n + h * cfg.ndt, nodes] - u_storage[n, nodes]
-
-    meta = pd.DataFrame({"sim_idx": idx, "n_step": np.repeat(n_list, len(nodes))})
-    return pd.concat([
-        meta.reset_index(drop=True),
-        pd.DataFrame(X.reshape(-1, len(INPUTS)), columns=INPUTS),
-        pd.DataFrame(Y.reshape(-1, len(OUTPUTS)), columns=OUTPUTS),
-    ], axis=1)
+            Y_out[row0:row0 + n_nodes, h - 1] = u_storage[n + h * cfg.ndt, nodes] - u_storage[n, nodes]
 
 
 def _pick_family_showcase(left_family, right_family, left_driven, right_driven, split_label, n_total) -> dict:
@@ -116,7 +115,25 @@ def load_hdf5_dataset(input_fields, cfg, h5_path, max_trajectories=None):
     OUTPUTS = make_output_columns(cfg)
     t_ctrl = (np.arange(cfg.Nt + 1) * cfg.dt).tolist()
 
-    FIELDS, bc_pairs, dfs = {}, [], []
+    # Every trajectory windows to the same row count (n_list/nodes only
+    # depend on cfg, not on the trajectory), so the full table's size is
+    # known up front -- one allocation, filled trajectory by trajectory,
+    # rather than 3000 small tables later pd.concat'd together (see
+    # _window_trajectory_into's docstring for why that mattered).
+    n_list = list(range(cfg.M_BACK * cfg.ndt, cfg.Nt - cfg.N_FWD * cfg.ndt + 1))
+    n_nodes = len(cfg.nodes)
+    rows_per_traj = len(n_list) * n_nodes
+    total_rows = n_total * rows_per_traj
+    n_in, n_out = len(INPUTS), len(OUTPUTS)
+
+    data_all = np.empty((total_rows, n_in + n_out), dtype=np.float32)
+    sim_idx_all = np.empty(total_rows, dtype=np.int32)
+    n_step_all = np.empty(total_rows, dtype=np.int32)
+    split_code_all = np.empty(total_rows, dtype=np.int8)
+    split_categories = ["train", "val", "test"]
+    split_code_of = {s: i for i, s in enumerate(split_categories)}
+
+    FIELDS, bc_pairs = {}, []
     idx_by_split = {"train": [], "val": [], "test": []}
     for idx in range(n_total):
         left_type = BC_LABEL_TO_TYPE[left_label[idx]]
@@ -132,15 +149,22 @@ def load_hdf5_dataset(input_fields, cfg, h5_path, max_trajectories=None):
                                     "source_label": right_label[idx]}),
         ))
 
-        dfs.append(_window_trajectory(idx, u_full, input_fields, cfg, INPUTS, OUTPUTS))
+        start = idx * rows_per_traj
+        end = start + rows_per_traj
+        _window_trajectory_into(u_full, input_fields, cfg, n_list,
+                                 data_all[start:end, :n_in], data_all[start:end, n_in:])
+        sim_idx_all[start:end] = idx
+        n_step_all[start:end] = np.repeat(n_list, n_nodes)
+        split_code_all[start:end] = split_code_of[split_label[idx]]
         idx_by_split[split_label[idx]].append(idx)
 
-    df = pd.concat(dfs, ignore_index=True)
-    split_df = pd.DataFrame(
-        [(i, s) for s, idxs in idx_by_split.items() for i in idxs],
-        columns=["sim_idx", "split"],
-    )
-    df = df.merge(split_df, on="sim_idx", how="left")
+    # copy=False: data_all becomes df's single backing block instead of
+    # being duplicated into one -- the sim_idx/n_step/split columns added
+    # after are comparatively tiny (int32/int8, not float32 x 49 columns).
+    df = pd.DataFrame(data_all, columns=INPUTS + OUTPUTS, copy=False)
+    df["sim_idx"] = sim_idx_all
+    df["n_step"] = n_step_all
+    df["split"] = pd.Categorical.from_codes(split_code_all, categories=split_categories)
 
     idx_train, idx_val, idx_test = idx_by_split["train"], idx_by_split["val"], idx_by_split["test"]
     rollout_idx = idx_test[0]
@@ -155,12 +179,33 @@ def load_hdf5_dataset(input_fields, cfg, h5_path, max_trajectories=None):
     return df, FIELDS, INPUTS, OUTPUTS, bc_pairs, idx_train, idx_val, idx_test, rollout_idx, family_showcase_idx
 
 
-def compute_norm_stats(df: pd.DataFrame, INPUTS, OUTPUTS, cfg) -> pd.DataFrame:
-    train_mask = df["split"] == "train"
+def compute_norm_stats(df: pd.DataFrame, INPUTS, OUTPUTS, cfg, chunk_rows: int = 2_000_000) -> pd.DataFrame:
+    # Filters the train split ONCE (not once per statistic) into a plain
+    # numpy array, then reduces it chunk by chunk with float64 accumulators
+    # -- NOT via train_block.std(dtype=np.float64), whose internal
+    # `array - mean` step would materialize a full copy of train_block AT
+    # FLOAT64 WIDTH (2x its float32 size) just to compute deviations. At the
+    # full dataset's scale (~28G float32) that's an extra ~56G, which is
+    # what pushed a real run past a 96G Slurm --mem limit. Chunking keeps
+    # memory bounded by chunk_rows regardless of dataset size, while still
+    # accumulating in float64 (a naive float32 sum over millions of rows
+    # loses meaningful precision) -- ddof=1 matches pandas' own .std() default.
     cols = INPUTS + OUTPUTS
-    norm_stats = pd.DataFrame({
-        "mean": df.loc[train_mask, cols].mean(),
-        "std": df.loc[train_mask, cols].std(),
-    })
+    train_mask = (df["split"] == "train").to_numpy()
+    train_block = df[cols].to_numpy(copy=False)[train_mask]
+    n_rows, n_cols = train_block.shape
+
+    sum_ = np.zeros(n_cols, dtype=np.float64)
+    for start in range(0, n_rows, chunk_rows):
+        sum_ += train_block[start:start + chunk_rows].sum(axis=0, dtype=np.float64)
+    mean = sum_ / n_rows
+
+    sq_dev_sum = np.zeros(n_cols, dtype=np.float64)
+    for start in range(0, n_rows, chunk_rows):
+        dev = train_block[start:start + chunk_rows].astype(np.float64) - mean
+        sq_dev_sum += (dev * dev).sum(axis=0)
+    std = np.sqrt(sq_dev_sum / (n_rows - 1))
+
+    norm_stats = pd.DataFrame({"mean": mean, "std": std}, index=cols)
     norm_stats["std"] = norm_stats["std"].replace(0, 1)
     return norm_stats

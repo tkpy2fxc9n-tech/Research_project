@@ -51,6 +51,25 @@ def plot_amplitude_and_energy(curves: dict, output_dir: Path):
     plt.close()
 
 
+def plot_one_step_predictions(y_true: np.ndarray, y_pred: np.ndarray, OUTPUTS: list[str],
+                               one_step_metrics: dict, output_dir: Path,
+                               filename: str = "one_step_predictions.png"):
+    fig, axes = plt.subplots(1, len(OUTPUTS), figsize=(6 * len(OUTPUTS), 6), squeeze=False)
+    for i, (ax, col) in enumerate(zip(axes.flatten(), OUTPUTS)):
+        y_r, y_p = y_true[:, i], y_pred[:, i]
+        ax.scatter(y_r, y_p, alpha=0.4, s=8)
+        lim = max(abs(y_r).max(), abs(y_p).max())
+        ax.plot([-lim, lim], [-lim, lim], "r--", lw=1, label="perfect prediction")
+        ax.set_xlabel(f"{col} real (physical)"); ax.set_ylabel(f"{col} predicted (physical)")
+        m = one_step_metrics[col]
+        ax.set_title(f"{col}\nMSE (norm)={m['mse_norm']:.2e}  |  R²={m['r2']:.3f}")
+        ax.legend(); ax.grid(True)
+    fig.suptitle("One-step prediction over the test split", fontsize=14)
+    plt.tight_layout()
+    plt.savefig(output_dir / filename, dpi=150, bbox_inches="tight")
+    plt.close()
+
+
 def make_rollout_animation(rollout: RolloutResult, cfg, output_dir: Path, filename: str = "rollout.gif"):
     U, U_reel = rollout.U, rollout.U_reel
     nodes = cfg.nodes

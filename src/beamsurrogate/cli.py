@@ -31,6 +31,21 @@ DATA_DIR = REPO_ROOT / "data"
 RUNS_DIR = REPO_ROOT / "runs"
 
 
+def _log_rss(label: str) -> None:
+    # Diagnostic checkpoint for the full (non-smoke-test) dataset's memory
+    # footprint -- current resident memory, not torch/pandas guesses, so a
+    # Slurm run's .log shows exactly where usage climbs instead of relying
+    # on extrapolation from a smaller local sample.
+    try:
+        with open("/proc/self/status") as f:
+            for line in f:
+                if line.startswith("VmRSS:"):
+                    print(f"[mem] {label}: {int(line.split()[1]) / 1e6:.2f} Go", flush=True)
+                    return
+    except OSError:
+        pass
+
+
 def parse_args():
     p = argparse.ArgumentParser(description="Train and evaluate one beamsurrogate run from a config file.")
     p.add_argument("--config", type=Path, required=True, help="Path to a configs/runs/<run_id>.yaml file.")
@@ -98,15 +113,25 @@ def run(cfg: Config, run_dir: Path, dataset_path: Path, max_trajectories: int | 
     set_seeds(cfg)
 
     INPUT_FIELDS = cfg.features
+    _log_rss("start")
     (df, FIELDS, INPUTS, OUTPUTS, bc_pairs, idx_train, idx_val, idx_test,
      rollout_idx, family_showcase_idx) = load_hdf5_dataset(INPUT_FIELDS, cfg, dataset_path, max_trajectories)
+    _log_rss("after load_hdf5_dataset")
     norm_stats = compute_norm_stats(df, INPUTS, OUTPUTS, cfg)
+    _log_rss("after compute_norm_stats")
 
     model = MODELS[cfg.model](len(INPUTS), len(OUTPUTS), cfg)
     print(model)
     print(f"Parameters: {sum(p.numel() for p in model.parameters()):,}")
 
     train_loader, X_val, y_val = make_dataloaders(df, INPUTS, OUTPUTS, norm_stats, cfg)
+    _log_rss("after make_dataloaders")
+    # df's train/val rows (>=95% of it) are never touched again after this
+    # point -- only the test split is, much later, for evaluate_one_step.
+    # Shrinking df now lets the rest of it be freed before training starts,
+    # instead of sitting alongside train_loader's own already-extracted copy.
+    df = df[df["split"] == "test"].reset_index(drop=True)
+    _log_rss("after trimming df to test split")
     patience = cfg.EARLY_STOP_PATIENCE if cfg.EARLY_STOP_PATIENCE > 0 else None
     model_path = run_dir / "model.pth"
 
@@ -118,18 +143,21 @@ def run(cfg: Config, run_dir: Path, dataset_path: Path, max_trajectories: int | 
                                              norm_stats, INPUTS, OUTPUTS, cfg, train_loader, model_path, patience)
     else:
         raise ValueError(f"Unknown regime {regime!r}, expected one of {sorted(REGIMES)}")
+    _log_rss("after training")
 
-    df_test = df[df["split"] == "test"].reset_index(drop=True)
-    one_step_metrics = evaluate_one_step(model, df_test, INPUTS, OUTPUTS, norm_stats)
+    one_step_metrics, y_true_onestep, y_pred_onestep = evaluate_one_step(model, df, INPUTS, OUTPUTS, norm_stats)
+    _log_rss("after evaluate_one_step")
 
     rollout = run_rollout(model, FIELDS, bc_pairs, rollout_idx, INPUT_FIELDS, norm_stats, INPUTS, OUTPUTS, cfg)
     bench = benchmark_inference(model, FIELDS, INPUT_FIELDS, norm_stats, INPUTS, OUTPUTS, rollout, cfg)
+    _log_rss("after rollout + benchmark")
 
     metrics = build_metrics(cfg, train_result=train_result, rollout=rollout, bench=bench,
                              one_step_metrics=one_step_metrics)
 
     figures_dir = run_dir / "figures"
     plots.plot_training_curve(train_result, figures_dir)
+    plots.plot_one_step_predictions(y_true_onestep, y_pred_onestep, OUTPUTS, one_step_metrics, figures_dir)
     plots.plot_rollout_error(metrics["curves"], figures_dir)
     plots.plot_amplitude_and_energy(metrics["curves"], figures_dir)
     plots.plot_spectrum(metrics["spectrum"], figures_dir)

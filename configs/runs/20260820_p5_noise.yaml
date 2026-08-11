@@ -1,0 +1,5 @@
+inherit: base
+run_id: 20260820_p5_noise
+phase: 5
+hypothesis: H8
+stabilizer: noise

@@ -22,7 +22,10 @@ dataset: simple
 
 # --- optimization --------------------------------------------------------
 N_EPOCHS: 100
-BATCH_SIZE: 64
+BATCH_SIZE: 4096   # measured empirically on this cluster (see scripts/run.job's OMP_NUM_THREADS
+                    # comment): near the throughput sweet spot for the full ~89M-row training
+                    # set on CPU -- much smaller wastes time in per-step overhead, much larger
+                    # hits diminishing/negative returns (matmul becomes memory-bandwidth bound)
 LEARNING_RATE: 0.001
 EARLY_STOP_PATIENCE: 15
 

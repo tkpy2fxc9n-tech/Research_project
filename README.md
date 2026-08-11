@@ -13,8 +13,8 @@ pip install -e .
 # 2. Generate the two canonical datasets (you run this yourself -- it can
 #    take a while at full scale; start with a small --n-trajectories to try
 #    the pipeline first).
-python scripts/make_dataset.py --profile simple  --n-trajectories 3000
-python scripts/make_dataset.py --profile complex --n-trajectories 3000
+python scripts/make_dataset.py --profile simple  --n-trajectories 2000
+python scripts/make_dataset.py --profile complex --n-trajectories 2000
 
 # 3. Sanity-check the physics before training anything
 python scripts/check_equivalence.py
