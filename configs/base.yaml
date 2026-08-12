@@ -9,7 +9,7 @@ model: mlp
 SS: 11
 M_BACK: 2
 N_FWD: 3
-ndt: 2
+ndt: 3
 features: [U]
 output: delta_u
 
