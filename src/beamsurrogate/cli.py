@@ -158,7 +158,7 @@ def run(cfg: Config, run_dir: Path, dataset_path: Path, max_trajectories: int | 
     figures_dir = run_dir / "figures"
     plots.plot_training_curve(train_result, figures_dir)
     plots.plot_one_step_predictions(y_true_onestep, y_pred_onestep, OUTPUTS, one_step_metrics, figures_dir)
-    plots.plot_rollout_error(metrics["curves"], figures_dir)
+    plots.plot_rollout_error(metrics["curves"], figures_dir, t_div=metrics["scalars"]["t_div"])
     plots.plot_amplitude_and_energy(metrics["curves"], figures_dir)
     plots.plot_spectrum(metrics["spectrum"], figures_dir)
     if make_animation:

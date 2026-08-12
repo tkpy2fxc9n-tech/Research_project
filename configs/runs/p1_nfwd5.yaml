@@ -1,4 +1,4 @@
-inherit: base
+inherit: phase2
 run_id: p1_nfwd5
 phase: 1
 hypothesis: H3

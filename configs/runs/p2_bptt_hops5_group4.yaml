@@ -1,0 +1,7 @@
+inherit: base
+run_id: p2_bptt_hops5_group4
+phase: 2
+hypothesis: H5
+regime: bptt
+TBPTT_HOPS: 5
+GROUP_SIZE: 4

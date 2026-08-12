@@ -28,11 +28,16 @@ def plot_training_curve(train_result, output_dir: Path):
     plt.close()
 
 
-def plot_rollout_error(curves: dict, output_dir: Path):
+def plot_rollout_error(curves: dict, output_dir: Path, t_div: float | None = None):
     plt.figure(figsize=(9, 5))
     plt.plot(curves["t"], curves["err_rel_mean"], "o-", ms=3, label="relative L2 error")
     plt.plot(curves["t"], curves["err_max"], "s-", ms=3, label="max absolute error (Linf)")
     plt.yscale("log")
+    if t_div is not None:
+        # Single divergence-time marker for both curves at once, rather than
+        # a separate threshold recomputed from the noisy relative curve --
+        # see compute_t_div in metrics.py for why it's err_max-based.
+        plt.axvline(t_div, color="red", linestyle="--", label=f"t_div = {t_div:.2f}")
     plt.xlabel("t"); plt.ylabel("error"); plt.grid(True, which="both"); plt.legend()
     plt.title("Rollout error over time")
     plt.savefig(output_dir / "error_vs_time.png", dpi=150, bbox_inches="tight")

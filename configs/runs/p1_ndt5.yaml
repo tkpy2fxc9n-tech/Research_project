@@ -1,0 +1,7 @@
+inherit: phase2
+run_id: p1_ndt5
+phase: 1
+hypothesis: null   # ndt sweep isn't in the original H1-H9 plan; assign an H-number if this becomes its own hypothesis
+ndt: 5
+# Receptive-field constraint N_FWD*ndt <= SS: 3*5=15 > SS=11 -- further outside
+# the constraint than ndt4, degradation expected to be more marked.

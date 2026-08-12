@@ -1,0 +1,5 @@
+inherit: base
+regime: pushforward   # winner of phase 2 (H5): p2_pushforward vs p2_bptt vs
+                       # p2_bptt_hops5_group4 -- r2_onestep 0.998 vs 0.86/0.81,
+                       # t_div 2.76 vs 0.6/0.6 for both bptt variants
+                       # (runs/p2_pushforward, runs/p2_bptt, runs/p2_bptt_hops5_group4)

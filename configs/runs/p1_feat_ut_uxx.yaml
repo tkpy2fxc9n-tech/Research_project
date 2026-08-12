@@ -1,4 +1,4 @@
-inherit: base
+inherit: phase2
 run_id: p1_feat_ut_uxx
 phase: 1
 hypothesis: H4
