@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # H1 (phase 0): the key report figure -- a high one-step R^2 next to that
 # SAME run's rollout error curve (log y-axis) diverging over time. Pure
-# post-processing over runs/20260810_p0_baseline/metrics.json (see
+# post-processing over runs/p0_baseline/metrics.json (see
 # h1_hist_deltau.py for the companion figure explaining WHY the one-step R^2
 # is inflated in the first place). No model is loaded, no training happens.
 # Usage: python analysis/h1_diag_r2_vs_rollout.py
@@ -23,10 +23,10 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 # nothing else, and its presence in configs/runs/ once made it possible to
 # pass it to scripts/run.job by mistake (accidentally training a full,
 # redundant copy of the baseline for ~18h instead of running this analysis).
-RUN_ID = "20260810_p0_diag_R2_vs_rollout"
+RUN_ID = "p0_diag_R2_vs_rollout"
 PHASE = 0
 HYPOTHESIS = "H1"
-SOURCE_RUN_ID = "20260810_p0_baseline"
+SOURCE_RUN_ID = "p0_baseline"
 
 
 def main():

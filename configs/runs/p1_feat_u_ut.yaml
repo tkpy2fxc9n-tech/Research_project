@@ -1,5 +1,5 @@
 inherit: base
-run_id: 20260815_p1_feat_u_ut
+run_id: p1_feat_u_ut
 phase: 1
 hypothesis: H4
 features: [U, Ut]

@@ -20,12 +20,12 @@ python scripts/make_dataset.py --profile complex --n-trajectories 2000
 python scripts/check_equivalence.py
 
 # 4. Run one experiment
-python -m beamsurrogate --config configs/runs/20260810_p0_baseline.yaml
+python -m beamsurrogate --config configs/runs/p0_baseline.yaml
 
 # 5. Smoke test (few trajectories, few epochs -- checks the pipeline runs
 #    end to end and writes a filled-in metrics.json; needs at least a small
 #    dataset from step 2, e.g. --n-trajectories 20)
-python -m beamsurrogate --config configs/runs/20260810_p0_baseline.yaml --smoke-test
+python -m beamsurrogate --config configs/runs/p0_baseline.yaml --smoke-test
 ```
 
 ## How a run works
@@ -35,7 +35,7 @@ Every run is one file under `configs/runs/`. It states only its
 
 ```yaml
 inherit: base
-run_id: 20260813_p1_mback3
+run_id: p1_mback3
 phase: 1
 hypothesis: H2
 M_BACK: 3
@@ -141,7 +141,7 @@ Archives/               older, previously-archived work (untouched by this
 ## Slurm
 
 ```bash
-sbatch scripts/run.job configs/runs/20260810_p0_baseline.yaml   # one run
+sbatch scripts/run.job configs/runs/p0_baseline.yaml   # one run
 sbatch scripts/submit_array.sbatch                                # every configs/runs/*.yaml, one array task each
 ```
 

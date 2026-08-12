@@ -26,7 +26,7 @@ from beamsurrogate.registry import DATASETS
 # nothing else, and its presence in configs/runs/ once made it possible to
 # pass it to scripts/run.job by mistake (accidentally training a full,
 # redundant copy of the baseline for ~18h instead of running this analysis).
-RUN_ID = "20260810_p0_hist_deltau"
+RUN_ID = "p0_hist_deltau"
 PHASE = 0
 HYPOTHESIS = "H1"
 AMPLITUDE_THRESHOLD_PCT = 1.0   # "part des delta_u proches de zero (ex. % en dessous de 1% de l'amplitude max)"

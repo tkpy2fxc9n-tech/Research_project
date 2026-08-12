@@ -1,5 +1,5 @@
 inherit: base
-run_id: 20260814_p1_nfwd4
+run_id: p1_nfwd4
 phase: 1
 hypothesis: H3
 N_FWD: 4

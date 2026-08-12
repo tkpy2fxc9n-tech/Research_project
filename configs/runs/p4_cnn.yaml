@@ -1,5 +1,5 @@
 inherit: base
-run_id: 20260819_p4_cnn
+run_id: p4_cnn
 phase: 4
 hypothesis: H7
 model: cnn

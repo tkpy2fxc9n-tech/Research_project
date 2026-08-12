@@ -1,5 +1,5 @@
 inherit: base
-run_id: 20260812_p2_pushforward
+run_id: p2_pushforward
 phase: 2
 hypothesis: H5
 regime: pushforward
