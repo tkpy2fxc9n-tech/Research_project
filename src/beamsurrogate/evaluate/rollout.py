@@ -46,13 +46,31 @@ def chrono(func, n_repeat=15, n_warmup=3):
     return d.mean(), d.std(), float(np.median(d))
 
 
+# FLOPs per interior grid point per leapfrog step, counted directly off
+# run_fd_simulation_general's update line (+, -, * = 1 FLOP each, same
+# convention torch.utils.flop_counter.FlopCounterMode uses for the NN side
+# below -- so the two counts are comparable): `2.0*u` appears twice in that
+# expression (once standalone, once inside the Laplacian term) and numpy
+# evaluates it twice as written, so this counts the actual work done, not a
+# hand-optimized minimum.
+#   2.0*u                         -> 1 mul
+#   (2u) - u_1                    -> 1 sub
+#   2.0*u (again, inside laplacian) -> 1 mul
+#   u_left - (2u)                 -> 1 sub
+#   (u_left-2u) + u_right         -> 1 add
+#   CFL^2 * laplacian             -> 1 mul
+#   term1 + CFL^2*laplacian       -> 1 add
+FD_FLOPS_PER_POINT_STEP = 7
+
+
 @dataclass
 class BenchmarkResult:
     fd_time_med: float
     fd_time_std: float
     nn_time_med: float
     nn_time_std: float
-    flops_per_call: float
+    fd_flops: float
+    nn_flops: float
     n_calls: int
 
 
@@ -78,10 +96,18 @@ def benchmark_inference(model, FIELDS, input_fields, norm_stats, INPUTS, OUTPUTS
     from torch.utils.flop_counter import FlopCounterMode
     with FlopCounterMode(display=False) as fc:
         model(torch.zeros((len(cfg.nodes), n_features)))
-    flops_per_call = fc.get_total_flops() * n_calls
+    nn_flops = fc.get_total_flops() * n_calls
+
+    # Analytical, not measured: numpy/BLAS don't expose a FLOP counter for
+    # plain elementwise array ops the way torch's FlopCounterMode does for
+    # the NN, so this is FD_FLOPS_PER_POINT_STEP x (interior points) x
+    # (timesteps) -- one full run_fd_simulation_general call, matching what
+    # fd_time_med/fd_time_std just benchmarked.
+    n_interior_points = cfg.i_right - cfg.i_left + 1
+    fd_flops = FD_FLOPS_PER_POINT_STEP * n_interior_points * cfg.Nt
 
     return BenchmarkResult(
         fd_time_med=fd_med, fd_time_std=float(fd_std),
         nn_time_med=nn_med, nn_time_std=float(nn_std),
-        flops_per_call=flops_per_call, n_calls=n_calls,
+        fd_flops=fd_flops, nn_flops=nn_flops, n_calls=n_calls,
     )

@@ -150,6 +150,19 @@ def build_metrics(cfg, *, train_result=None, rollout: RolloutResult | None = Non
         "n_params": int(train_result.n_params) if train_result is not None else None,
         "train_time_s": float(train_result.train_time_s) if train_result is not None else None,
         "net_evals_per_unit_time": float(bench.n_calls / cfg.t_end) if bench is not None else None,
+        "net_evals_total": int(bench.n_calls) if bench is not None else None,
+        # Wall-clock time (median/std over 15 repeats, 3 warmup -- see
+        # evaluate/rollout.py's chrono()) and FLOPs for one full test-time
+        # rollout, solver (fd_*) vs surrogate (nn_*) -- see BenchmarkResult
+        # in evaluate/rollout.py for how each is computed, and the
+        # FD_FLOPS_PER_POINT_STEP comment there for the FD FLOP convention
+        # (analytical, not measured -- numpy has no FLOP counter for this).
+        "fd_time_med_s": float(bench.fd_time_med) if bench is not None else None,
+        "fd_time_std_s": float(bench.fd_time_std) if bench is not None else None,
+        "nn_time_med_s": float(bench.nn_time_med) if bench is not None else None,
+        "nn_time_std_s": float(bench.nn_time_std) if bench is not None else None,
+        "fd_flops": float(bench.fd_flops) if bench is not None else None,
+        "nn_flops": float(bench.nn_flops) if bench is not None else None,
         "err_near_junction": err_near_junction,
     }
 

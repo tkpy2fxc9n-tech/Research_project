@@ -48,7 +48,8 @@ class Config:
     model: str = "mlp"          # registry.MODELS key: "mlp" | "cnn"          (H7)
     regime: str = "teacher_forcing"   # registry.REGIMES key: "teacher_forcing" | "pushforward" | "bptt"  (H5)
     stabilizer: str = "none"    # registry.STABILIZERS key: "none" | "noise" | "laplacian"  (H8)
-    dataset: str = "simple"     # registry.DATASETS key: "simple" | "complex"
+    dataset: str = "simple"     # registry.DATASETS key: "simple" | "medium" | "complex" |
+                                 # "simple_coarse_r2" | "simple_coarse_r4"
 
     # --- MLP architecture -------------------------------------------------
     HIDDEN_SIZES: tuple = (512, 256, 64)

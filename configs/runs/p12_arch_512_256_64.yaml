@@ -1,0 +1,19 @@
+inherit: phase2
+run_id: p12_arch_512_256_64
+phase: 12
+hypothesis: null   # 12 (taille du reseau), not in the original H1-H9 plan
+
+# Same settled hyperparameters as the rest of this campaign (see
+# p11_coarse_r2.yaml for the full "etape 10" assumption note) --
+# only HIDDEN_SIZES varies across this whole 12-arch sweep.
+regime: pushforward
+M_BACK: 3
+N_FWD: 2
+features: [U]
+LAMBDA_PHYSICS: 0
+
+HIDDEN_SIZES: [512, 256, 64]   # bras large -- borne superieure de cout et de capacite
+# NOTE: [512,256,64] is the base.yaml/campaign default used everywhere so
+# far -- if that's really what "l'etape 10" settled on, this IS the "ref"
+# row (no new training needed, same as ref's own note), not a separate run.
+# Kept as its own file in case etape 10 actually picked something else.

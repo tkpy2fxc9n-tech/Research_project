@@ -13,7 +13,8 @@ from ..physics.waves import apply_boundary
 
 # The 6 driving families data/generate.py's "complex" profile draws from --
 # used to pick one held-out showcase trajectory per family (analysis/plots).
-SHOWCASE_FAMILIES = ["fourier", "sinusoid", "chirp", "gaussian", "shock", "filtered_random"]
+SHOWCASE_FAMILIES = ["fourier", "sinusoid", "chirp", "gaussian", "shock", "filtered_random",
+                      "sine_pulse", "triangular", "sawtooth", "square"]
 
 # data/generate.py's 3 boundary "type" labels -> this project's
 # dirichlet/neumann vocabulary. "Displacement" and "Velocity (integrated)"

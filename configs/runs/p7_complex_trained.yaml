@@ -1,0 +1,24 @@
+inherit: phase2
+run_id: p7_complex_trained
+phase: 7
+hypothesis: null   # dataset-generalization test, not in the original H1-H9 plan
+                    # (same situation as the ndt sweep, see configs/runs/p1_ndt2.yaml)
+regime: pushforward   # pinned explicitly (not just inherited from phase2) so this
+                       # keeps testing pushforward even if phase2.yaml's recorded
+                       # H5 winner ever changes later
+M_BACK: 3
+N_FWD: 2
+features: [U]   # carries forward the operator settled on through H2-H4 (matches
+                 # p1_mback3 / p3_pinn_* exactly)
+dataset: complex   # the actual axis this run tests -- everything else above is
+                    # carried over unchanged from the simple-dataset campaign, so
+                    # a difference in results is attributable to the dataset, not
+                    # a confound. rollout_idx/amp_ref/t_div are all recomputed
+                    # automatically against the complex dataset's own test split
+                    # (data/split.py's load_hdf5_dataset takes dataset_path as an
+                    # argument -- nothing hardcoded to "simple" anywhere downstream).
+
+# LAMBDA_PHYSICS: TBD -- p3_pinn_* (H6) still running as of 2026-08-14. Set this
+# explicitly to whichever weight wins that sweep once it concludes, BEFORE
+# launching this run. Until set, it silently falls back to the inherited
+# default (0.01) -- do not launch with that assumption unverified.

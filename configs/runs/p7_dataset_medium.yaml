@@ -1,0 +1,20 @@
+inherit: phase2
+run_id: p7_dataset_medium
+phase: 7
+hypothesis: null   # dataset-generalization test, not in the original H1-H9 plan
+                    # (same situation as p7_dataset_complex / the ndt sweep)
+regime: pushforward   # pinned explicitly (not just inherited from phase2) so this
+                       # keeps testing pushforward even if phase2.yaml's recorded
+                       # H5 winner ever changes later
+M_BACK: 3
+N_FWD: 2
+features: [U]   # carries forward the operator settled on through H2-H4 (matches
+                 # p1_mback3 / p3_pinn_* / p7_dataset_complex exactly)
+dataset: medium   # intermediate between simple and complex: same left-rest/
+                   # right-driven topology as simple, but 5 waveform families
+                   # (gaussian, sinusoid, triangular, sawtooth, square) instead
+                   # of gaussian only -- see data/generate.py's "medium" profile.
+
+LAMBDA_PHYSICS: 0   # explicit, not inherited -- matches p7_dataset_complex:
+                     # establishes the no-physics-loss medium baseline without
+                     # waiting for the p3_pinn_* (H6) sweep's winner.

@@ -25,6 +25,14 @@ REGIMES = {
 DATASETS = {
     "simple": "beam_dataset_simple.h5",
     "complex": "beam_dataset_complex.h5",
+    "medium": "beam_dataset_medium.h5",
+    # 11a (grille grossiere): "simple", subsampled in space+time -- see
+    # scripts/make_coarse_dataset.py. Not fresh FD runs at coarse resolution.
+    "simple_coarse_r2": "beam_dataset_simple_coarse_r2.h5",
+    "simple_coarse_r4": "beam_dataset_simple_coarse_r4.h5",
+    # p14 (adimensionnement): "simple" regenerated with E=rho=L=1 and
+    # per-sample amplitude normalization -- see scripts/make_dataset_nondim.py.
+    "simple_nondim": "beam_dataset_simple_nondim.h5",
 }
 
 __all__ = ["MODELS", "REGIMES", "STABILIZERS", "DATASETS", "resolve_stabilizer"]

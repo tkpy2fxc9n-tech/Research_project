@@ -1,0 +1,12 @@
+inherit: phase2
+run_id: p12_arch_256_16
+phase: 12
+hypothesis: null   # 12 (taille du reseau), not in the original H1-H9 plan
+
+regime: pushforward
+M_BACK: 3
+N_FWD: 2
+features: [U]
+LAMBDA_PHYSICS: 0
+
+HIDDEN_SIZES: [256, 16]   # 2 hidden layers

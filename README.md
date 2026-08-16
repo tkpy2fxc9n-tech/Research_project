@@ -88,6 +88,8 @@ without special-casing which run produced it. Built by
  "scalars": {"r2_onestep": null, "E_short": null, "t_div": null,
              "amp_loss_pct": null, "energy_drift_pct": null,
              "n_params": null, "train_time_s": null, "net_evals_per_unit_time": null,
+             "net_evals_total": null, "fd_time_med_s": null, "fd_time_std_s": null,
+             "nn_time_med_s": null, "nn_time_std_s": null, "fd_flops": null, "nn_flops": null,
              "err_near_junction": null},
  "curves": {"t": [], "err_rel_mean": [], "err_max": [], "amp_max": [], "energy": []},
  "spectrum": {"k": [], "power_pred": [], "power_ref": []}}

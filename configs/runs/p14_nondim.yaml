@@ -1,0 +1,23 @@
+# p14 (adimensionnement) -- baseline dimensionnelle reentrainee sur un
+# dataset regenere en variables adimensionnelles (E=rho=L=1, per-sample
+# amplitude normalization -- scripts/make_dataset_nondim.py). Meme CFL,
+# meme Nx/Nt, meme seed que la baseline "simple" -- seuls E/rho/L/t_end/
+# SIGMA/OMEGA changent ici, tout le reste vient de base.yaml comme
+# n'importe quel autre run. Attendu : E_short/t_div ~identiques a la
+# baseline dimensionnelle (dataset: simple) -- un ecart signale un bug
+# dans le pipeline, pas un changement de probleme.
+inherit: base
+run_id: p14_nondim
+phase: 14
+hypothesis: null
+
+dataset: simple_nondim
+
+E: 1.0
+rho: 1.0
+L: 1.0
+t_end: 3.5355339059327383   # 5.0 * sqrt(E_baseline/rho_baseline) = 5.0 * sqrt(0.5)
+SIGMA_MIN: 0.03535533905932738
+SIGMA_MAX: 0.3535533905932738
+OMEGA_MIN: 0.07071067811865477
+OMEGA_MAX: 0.7071067811865477

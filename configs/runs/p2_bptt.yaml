@@ -3,3 +3,4 @@ run_id: p2_bptt
 phase: 2
 hypothesis: H5
 regime: bptt
+LAMBDA_PHYSICS: 0   # isolate H5 (regime) from H6 (PINN residual weight, tested separately)

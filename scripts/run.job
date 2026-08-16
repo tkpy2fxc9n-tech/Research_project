@@ -12,12 +12,18 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=96G
-#SBATCH --exclusive   # whole node to itself: a node has ~125G total (sinfo),
-                       # so two of these jobs sharing one node already risks
-                       # exceeding physical RAM even before either nears its
-                       # own --mem request (see incident 148864-148866, three
-                       # runs launched together all landed on node mohawk
-                       # with 96+96+120=312G combined requested)
+# No --exclusive (removed 2026-08-14, was here since incident 148864-148866:
+# three under-specified --mem=96G jobs landed on the same node and hit
+# 96+96+120=312G combined, well past physical RAM). That incident was really
+# about --mem not reflecting real usage, not about node-sharing itself --
+# Slurm's cgroup enforces each job's own --mem as a hard per-job ceiling
+# regardless of what else is on the node, so once --mem is set to what a run
+# actually needs (measure via `sacct -j <id> --format=MaxRSS`, bump with
+# `sbatch --mem=<X>G scripts/run.job ...` for a heavy config), co-location is
+# safe again. Dropping --exclusive matters because it was making every run
+# wait for an entire node to sit fully idle before starting (observed
+# blocking heavy-feature/PINN runs behind other users' jobs for hours), a far
+# stricter wait than "somewhere with enough free memory."
 #SBATCH --time=20:00:00
 #SBATCH --output=logs/%x_%j.log
 #SBATCH --error=logs/%x_%j.err
@@ -49,12 +55,33 @@ scontrol update JobId="$SLURM_JOB_ID" JobName="$(basename "$CONFIG" .yaml)" 2>/d
 
 # Matches --cpus-per-task above (NOT 1) -- benchmarked empirically: torch's
 # intra-op matmul threading gives ~5x throughput at BATCH_SIZE=4096 with 8
-# threads vs 1, on this node. Only safe because this job owns its whole
-# Slurm allocation; 1 was needed for the SEPARATE, unrelated case of running
-# beamsurrogate directly in an interactive shell on a shared login node,
-# where torch would otherwise grab far more threads than the node can host.
+# threads vs 1, on this node. Safe to pin at 8 regardless of what else is
+# co-located on the node (no --exclusive anymore, see above): Slurm's cgroup
+# constrains this job to its --cpus-per-task=8 allocation on its own, that
+# was never actually dependent on owning the whole node. 1 was needed for
+# the SEPARATE, unrelated case of running beamsurrogate directly in an
+# interactive shell on a shared login node, where torch would otherwise
+# grab far more threads than the node can host.
 export OMP_NUM_THREADS=8 MKL_NUM_THREADS=8 OPENBLAS_NUM_THREADS=8 NUMEXPR_NUM_THREADS=8 VECLIB_MAXIMUM_THREADS=8
 PYTHON=/home/aph25/Desktop/wave_env/bin/python
+
+# --output/--error above are fixed by Slurm at submit time (logs/%x_%j.log),
+# before this script -- let alone cfg.run_id inside the YAML -- has been
+# read, so Slurm can never write directly into runs/<run_id>/logs/. Instead,
+# copy the finished Slurm log there ourselves once run_id is known. %x
+# resolves to the job name Slurm had when it opened the file, i.e. the
+# --job-name above (the scontrol rename at line 48 happens too late to
+# affect it), which is exactly $SLURM_JOB_NAME's value for the rest of this
+# script's life. A trap (not a line after the python call) so the log is
+# still copied if the run dies partway through.
+save_slurm_log() {
+    local run_id
+    run_id="$(basename "$CONFIG" .yaml)"
+    mkdir -p "runs/$run_id/logs"
+    cp -f "logs/${SLURM_JOB_NAME}_${SLURM_JOB_ID}.log" "runs/$run_id/logs/" 2>/dev/null || true
+    cp -f "logs/${SLURM_JOB_NAME}_${SLURM_JOB_ID}.err" "runs/$run_id/logs/" 2>/dev/null || true
+}
+trap save_slurm_log EXIT
 
 time "$PYTHON" -u -m beamsurrogate --config "$CONFIG"
 echo "RUN DONE: $CONFIG"

@@ -1,0 +1,20 @@
+inherit: phase2
+run_id: p7_dataset_complex
+phase: 7
+hypothesis: null   # dataset-generalization test, not in the original H1-H9 plan
+                    # (same situation as p7_complex_trained / the ndt sweep)
+regime: pushforward   # pinned explicitly (not just inherited from phase2) so this
+                       # keeps testing pushforward even if phase2.yaml's recorded
+                       # H5 winner ever changes later
+M_BACK: 3
+N_FWD: 2
+features: [U]   # carries forward the operator settled on through H2-H4 (matches
+                 # p1_mback3 / p3_pinn_* exactly)
+dataset: complex   # trained AND tested on complex, unlike p7_complex_zeroshot
+                    # which reuses a simple-trained checkpoint with no retraining.
+
+LAMBDA_PHYSICS: 0   # explicit, not inherited -- run launched in parallel with the
+                     # p3_pinn_* (H6) sweep, deliberately WITHOUT waiting for its
+                     # winner, so this establishes the no-physics-loss complex
+                     # baseline now. p7_complex_trained.yaml is kept separate and
+                     # still reserved for whichever LAMBDA_PHYSICS wins H6.

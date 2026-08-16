@@ -1,0 +1,22 @@
+inherit: phase2
+run_id: p11_coarse_r4
+phase: 11
+hypothesis: null   # 11a (grille grossiere), not in the original H1-H9 plan
+
+# See p11_coarse_r2.yaml for the full rationale -- same assumption
+# about "le modele final de l'etape 10", same reasoning for what's held
+# fixed vs varied.
+regime: pushforward
+M_BACK: 3
+N_FWD: 2
+features: [U]
+LAMBDA_PHYSICS: 0
+
+# r=4 grid coarsening (dx x4.125, dt x4).
+Nx: 25
+Nt: 125
+dataset: simple_coarse_r4   # fine solution, subsampled -- NOT a fresh FD run
+                             # at coarse resolution. Mandatory comparison
+                             # against a solver run natively on this SAME
+                             # coarse grid happens separately at eval time,
+                             # not against the fine-grid FD reference.
