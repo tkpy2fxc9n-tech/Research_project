@@ -5,7 +5,7 @@
 # the "simple" profile (Beam_surrogate_model/training/code/scenarios.py's
 # gaussian-right/rest-left setup, generalized here to draw amplitude AND
 # width from an interval, per the report). Never called automatically by a
-# training run -- see scripts/make_dataset.py.
+# training run -- see dataset/make_dataset.py.
 from __future__ import annotations
 
 from collections import Counter
@@ -34,6 +34,14 @@ BC_OPTIONS_SIMPLE = [("Displacement", "dirichlet", False)]
 
 REST_SHARES_COMPLEX = {"both_driven": 0.65, "left_rest": 0.15, "right_rest": 0.15, "both_rest": 0.05}
 REST_SHARES_SIMPLE = {"left_rest": 1.0}   # left always at rest, right always driven
+# medium_bidir: the ONLY difference from "medium". "medium" (like "simple")
+# drives the right end and holds the left at rest in every single trajectory,
+# so a model trained on it has never seen a wave enter from the left, and
+# never seen two waves meet inside one rod. Both happen constantly at the
+# INTERIOR rods of a lattice -- which is where the gaussian-only models
+# diverged in p17, and why p17's rod-orientation workaround existed at all.
+# "both_rest" is deliberately absent: it yields a beam that never moves.
+REST_SHARES_MEDIUM_BIDIR = {"both_driven": 0.5, "left_rest": 0.25, "right_rest": 0.25}
 REST_PATTERNS = {  # pattern name -> (left_driven, right_driven)
     "both_driven": (True, True), "left_rest": (False, True),
     "right_rest": (True, False), "both_rest": (False, False),
@@ -72,6 +80,20 @@ PROFILES = {
     # and complex (complex also varies BC pattern/type and initial state).
     "medium": dict(bc_options=BC_OPTIONS_SIMPLE, rest_shares=REST_SHARES_SIMPLE,
                     family_shares=FAMILY_SHARES_MEDIUM, initial_state_shares=INITIAL_STATE_SHARES_SIMPLE),
+    # Same recipe as "medium" -- 5 waveform families evenly, displacement BC
+    # only, never pre-excited -- except the driving is no longer one-sided:
+    # half the trajectories drive BOTH ends at once (families drawn
+    # independently per end, so 25 shape pairs), a quarter drive the right
+    # only, a quarter the left only. Nothing else differs from "medium".
+    "medium_bidir": dict(bc_options=BC_OPTIONS_SIMPLE, rest_shares=REST_SHARES_MEDIUM_BIDIR,
+                          family_shares=FAMILY_SHARES_MEDIUM, initial_state_shares=INITIAL_STATE_SHARES_SIMPLE),
+    # Same recipe as "simple" -- gaussian family only, displacement BC only,
+    # never pre-excited -- except the driving is no longer one-sided: reuses
+    # REST_SHARES_MEDIUM_BIDIR (both_driven 0.5 / left_rest 0.25 / right_rest
+    # 0.25). The gaussian-only counterpart to "medium_bidir", for isolating
+    # the bidirectional-driving effect without also varying waveform family.
+    "simple_bidir": dict(bc_options=BC_OPTIONS_SIMPLE, rest_shares=REST_SHARES_MEDIUM_BIDIR,
+                          family_shares=FAMILY_SHARES_SIMPLE, initial_state_shares=INITIAL_STATE_SHARES_SIMPLE),
 }
 
 
@@ -241,7 +263,7 @@ def generate_dataset(cfg, profile_name: str, n_trajectories: int, output_path: P
                       normalize_per_sample: bool = False) -> Path:
     # normalize_per_sample=False (default) reproduces this function's
     # original behavior exactly -- every existing caller (scripts/
-    # make_dataset.py, scripts/make_coarse_dataset.py) omits this argument,
+    # make_dataset.py, dataset/make_coarse_dataset.py) omits this argument,
     # so simple/medium/complex generation is untouched. =True divides each
     # trajectory (and its driving BC values) by its own peak |u|, an exact
     # symmetry of the linear wave equation -- only used by scripts/

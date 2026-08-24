@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-p7_dataset_medium: one rollout figure per waveform family (gaussian,
+p6_dataset_medium: one rollout figure per waveform family (gaussian,
 sine_pulse, triangular, sawtooth, square -- the 5 families data/generate.py's
 "medium" profile draws from), instead of the single arbitrary test
 trajectory cli.py's own rollout.gif uses.
@@ -41,7 +41,7 @@ from beamsurrogate.evaluate import plots  # noqa: E402
 
 DATA_DIR = REPO_ROOT / "data"
 RUNS_DIR = REPO_ROOT / "runs"
-SOURCE_RUN_ID = "p7_dataset_medium"
+SOURCE_RUN_ID = "p6_dataset_medium"
 EXPECTED_FAMILIES = ["gaussian", "sine_pulse", "triangular", "sawtooth", "square"]
 
 

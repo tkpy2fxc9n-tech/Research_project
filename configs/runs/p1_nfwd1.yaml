@@ -1,5 +1,0 @@
-inherit: phase2
-run_id: p1_nfwd1
-phase: 1
-hypothesis: H3
-N_FWD: 1

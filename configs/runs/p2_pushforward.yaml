@@ -1,5 +1,0 @@
-inherit: base
-run_id: p2_pushforward
-phase: 2
-hypothesis: H5
-regime: pushforward

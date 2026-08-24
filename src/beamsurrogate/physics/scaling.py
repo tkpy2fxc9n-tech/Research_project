@@ -1,6 +1,6 @@
 # Physical <-> nondimensional conversion for ONE beam scenario -- used only
-# by the p14 runs (configs/runs/p14_nondim.yaml,
-# scripts/make_dataset_nondim.py, scripts/check_nondim_scaling.py). Every
+# by the p14 runs (configs/runs/p8_nondim.yaml,
+# dataset/make_dataset_nondim.py, checks/check_nondim_scaling.py). Every
 # other run keeps using physical (E, rho, L) Config fields directly and
 # never touches this module.
 #

@@ -1,5 +1,0 @@
-inherit: base
-run_id: p4_cnn
-phase: 4
-hypothesis: H7
-model: cnn

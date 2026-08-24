@@ -1,6 +1,6 @@
 # Differentiable (never falling back to numpy) torch port of the
 # generalized-boundary-condition physics validated in physics/solver.py and
-# physics/waves.py, plus the PDE residual (H6/PINN term) and the composite
+# physics/waves.py, plus the PDE residual (phase 3/PINN term) and the composite
 # loss combination shared by the bptt and pushforward regimes. No in-place
 # tensor ops: every step rebuilds a new tensor, so the gradient path is never
 # disturbed. Ported from Tests/Model_in_tests/full_rollout_training_conv1d/
@@ -157,7 +157,7 @@ def pde_residual_torch(u_prev: torch.Tensor, u_curr: torch.Tensor, u_next: torch
 def combine_losses(cfg, *, rollout=None, physics=None, data=None) -> torch.Tensor:
     # Weighted sum of whichever terms a regime actually computed -- the same
     # LAMBDA_ROLLOUT/LAMBDA_PHYSICS/LAMBDA_DATA combination used by both the
-    # bptt and pushforward regimes (LAMBDA_PHYSICS=0 disables the H6/PINN
+    # bptt and pushforward regimes (LAMBDA_PHYSICS=0 disables the phase-3/PINN
     # term without the caller needing a separate code path).
     total = torch.zeros(())
     if rollout is not None:

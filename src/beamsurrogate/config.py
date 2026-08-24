@@ -1,8 +1,13 @@
-# Single source of truth for every run parameter. A run is a YAML file that
-# only states its DIFFERENCE from configs/base.yaml (via `inherit: base`) --
-# see load_config() below. The `model`/`regime`/`stabilizer`/`dataset`
-# string fields select a callable from registry.py; that indirection is what
-# replaces copy-pasting a whole project directory per experiment variant.
+# Single source of truth for every run parameter. A run is one self-contained
+# YAML file under configs/runs/ -- every field this dataclass has, spelled
+# out in full (see load_config() below; configs/runs/*.yaml were generated
+# from this dataclass's own defaults on 2026-08-20, when the earlier
+# `inherit: base` chain -- a run stating only its diff from configs/base.yaml
+# -- was dropped because it made it impossible to see what a run actually
+# does without also reading base.yaml/config.py). The `model`/`regime`/
+# `stabilizer`/`dataset` string fields select a callable from registry.py;
+# that indirection is what replaces copy-pasting a whole project directory
+# per experiment variant.
 from __future__ import annotations
 
 from dataclasses import dataclass, field, fields
@@ -16,9 +21,11 @@ import yaml
 @dataclass
 class Config:
     # --- run identity (bookkeeping, not physics) ---------------------------
+    # No `phase` field on purpose -- which phase a run belongs to is encoded
+    # only in its run_id/folder name (the `pN_` prefix), never duplicated as
+    # data here. Two sources of truth for the same fact drift apart; one
+    # doesn't.
     run_id: str = "unnamed"
-    phase: int | None = None
-    hypothesis: str | None = None
 
     # --- beam physics --------------------------------------------------
     E: float = 1.0
@@ -43,13 +50,27 @@ class Config:
     SIGMA_MAX: float = 0.5     # a pulse width is not an angular frequency)
 
     # --- what a run trains ----------------------------------------------
-    features: list[str] = field(default_factory=lambda: ["U"])   # H4: subset of {"U","Ut","Uxx"}
+    features: list[str] = field(default_factory=lambda: ["U"])   # phase 2: subset of {"U","Ut","Uxx"}
     output: str = "delta_u"     # only one supported output convention so far
-    model: str = "mlp"          # registry.MODELS key: "mlp" | "cnn"          (H7)
-    regime: str = "teacher_forcing"   # registry.REGIMES key: "teacher_forcing" | "pushforward" | "bptt"  (H5)
-    stabilizer: str = "none"    # registry.STABILIZERS key: "none" | "noise" | "laplacian"  (H8)
-    dataset: str = "simple"     # registry.DATASETS key: "simple" | "medium" | "complex" |
-                                 # "simple_coarse_r2" | "simple_coarse_r4"
+    model: str = "mlp"          # registry.MODELS key: "mlp" | "cnn"          (phase 14)
+    regime: str = "teacher_forcing"   # registry.REGIMES key: "teacher_forcing" | "pushforward" | "bptt"  (phase 1)
+    stabilizer: str = "none"    # registry.STABILIZERS key: "none" | "noise" | "laplacian" | "both"  (phase 10)
+    dataset: str = "A"          # registry.DATASETS key: "A" | "B" | "C" | "D" |
+                                 # "simple_coarse_r2" | "simple_coarse_r4" | "simple_nondim"
+    # Only read by pushforward/bptt (teacher_forcing's val loss is already
+    # the same MSE formula as its train loss, nothing to switch). "loss"
+    # (default) = the regime's own train-loss formula, evaluated on
+    # validation data with no gradient -- same units/procedure as
+    # train_history, so the two curves become directly comparable. "rollout"
+    # = evaluate_val_rollout, a full autoregressive replay in physical
+    # units, selecting/early-stopping on autonomous-rollout survival instead
+    # -- must now be set explicitly. Was "rollout" by default until
+    # 2026-08-20: same silent-default trap as LAMBDA_PHYSICS above --
+    # 49 of 52 configs/runs/*.yaml never set this field and were silently
+    # using rollout-based model selection without anyone deciding that.
+    # Every config that wants rollout-based selection must pin VAL_METRIC
+    # itself now.
+    VAL_METRIC: str = "loss"
 
     # --- MLP architecture -------------------------------------------------
     HIDDEN_SIZES: tuple = (512, 256, 64)
@@ -69,7 +90,17 @@ class Config:
     GROUP_SIZE: int = 8
     TBPTT_HOPS: int = 10
     LAMBDA_DATA: float = 1.0
-    LAMBDA_PHYSICS: float = 0.01   # H6 (PINN residual weight); 0 disables the term
+    LAMBDA_PHYSICS: float = 0.0    # phase 3 (PINN residual weight); a particular case tested
+                                    # deliberately in the p3 campaign, not a silent default
+                                    # every other run should inherit -- every config that
+                                    # wants the physics term must pin LAMBDA_PHYSICS itself
+                                    # (see configs/runs/p3_pinn_*.yaml). Was 0.01 until
+                                    # 2026-08-19: that default made LAMBDA_PHYSICS silently
+                                    # active in any run that didn't override it, once
+                                    # training/pushforward.py grew a physics term (commit
+                                    # 3bfa23e) -- p2_pushforward_val_train_same and the
+                                    # p4_cnn/p4_mlp/p4_cnn_ss20_c8_8 architecture-comparison
+                                    # runs were all affected without anyone intending it.
     LAMBDA_ROLLOUT: float = 1.0
 
     # --- pushforward regime (training/pushforward.py) ----------------------
@@ -81,6 +112,16 @@ class Config:
     # --- stabilizers (training/stabilizers.py) -----------------------------
     NOISE_STD: float = 0.1
     SMOOTH_ALPHA: float = 0.20     # must stay < 0.25 (smoothing stability)
+
+    # Rest-bias suppression (physics/solver.py:compute_rest_bias) -- the
+    # network's output at zero input is subtracted from every rollout step so
+    # the resting zone stays at 0, instead of drifting by whatever constant
+    # bias the network happens to output there. Unconditional (always
+    # subtracted) until phase 10b; this flag makes it a knob so its
+    # contribution to rollout stability can be isolated from
+    # NOISE_STD/SMOOTH_ALPHA above. Default True preserves every existing
+    # run's behavior unchanged.
+    BIAS_SUPPRESSION: bool = True
 
     # --- reproducibility ----------------------------------------------------
     SEED: int = 42
@@ -124,47 +165,31 @@ def set_seeds(cfg: Config) -> None:
     np.random.seed(cfg.SEED)
 
 
-def _find_configs_root(path: Path) -> Path:
-    for parent in (path.parent, *path.parents):
-        if parent.name == "configs":
-            return parent
-    return path.parent
-
-
-def _resolve_inherit(name: str, configs_root: Path) -> Path:
-    for candidate in (configs_root / f"{name}.yaml", configs_root / "retained" / f"{name}.yaml"):
-        if candidate.exists():
-            return candidate
-    raise FileNotFoundError(f"inherit: {name!r} not found under {configs_root} or {configs_root/'retained'}")
-
-
-def _load_yaml_chain(path: Path, configs_root: Path) -> dict:
-    with open(path) as f:
-        data = yaml.safe_load(f) or {}
-    inherit = data.pop("inherit", None)
-    if inherit:
-        parent_data = _load_yaml_chain(_resolve_inherit(inherit, configs_root), configs_root)
-        parent_data.update(data)
-        return parent_data
-    return data
-
-
 def load_config(path: str | Path, **overrides) -> Config:
-    # Merges the `inherit: base` chain (run YAML -> base.yaml, at most one
-    # level deep in practice) then applies **overrides (e.g. from `--set
-    # KEY=VALUE` on the CLI) on top. A 28th run costs a new configs/runs/*.yaml
-    # with `inherit: base` plus its handful of delta fields -- never a copy
-    # of this function or of any code.
+    # Reads one self-contained runs/<phase>/<run_id>/config.yaml (every field
+    # spelled out, nothing implicit) and applies **overrides on top (e.g.
+    # from `--set KEY=VALUE` on the CLI). A new run costs a new folder --
+    # copy an existing config.yaml and change the values that differ, never
+    # a copy of this function or of any code.
+    #
+    # run_id is NEVER read from the file -- a run's identity is its folder
+    # name (runs/<phase>/<run_id>/) and that alone, so it can't drift out of
+    # sync with a value repeated inside the file. A config.yaml that DOES
+    # set run_id is rejected outright rather than silently overridden, so
+    # the mistake surfaces immediately instead of hiding a stale value.
     path = Path(path).resolve()
-    configs_root = _find_configs_root(path)
-    raw = _load_yaml_chain(path, configs_root)
-    raw.pop("inherit", None)
+    with open(path) as f:
+        raw = yaml.safe_load(f) or {}
+    if "run_id" in raw:
+        raise ValueError(f"{path}: run_id must not be set in the file -- a run's identity is its "
+                          f"folder name ({path.parent.name}) only, never repeated inside the config.")
     raw.update(overrides)
-    known = {f.name for f in fields(Config)}
+    known = {f.name for f in fields(Config)} - {"run_id"}
     unknown = set(raw) - known
     if unknown:
         raise ValueError(f"Unknown config field(s) in {path}: {sorted(unknown)}")
     for tuple_field in ("HIDDEN_SIZES", "CNN_CHANNELS"):
         if tuple_field in raw and isinstance(raw[tuple_field], list):
             raw[tuple_field] = tuple(raw[tuple_field])
+    raw["run_id"] = path.parent.name
     return Config(**raw)

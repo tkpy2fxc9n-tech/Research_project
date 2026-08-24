@@ -1,0 +1,46 @@
+#!/bin/bash
+# Analysis-script counterpart to run.job: runs an analysis/*.py script on a
+# compute node instead of the login node. Needed because these scripts call
+# the same load_hdf5_dataset()/compute_norm_stats() training uses -- e.g.
+# p6_analysis_dataset_comparison.py loads full trajectory data per dataset
+# to get norm stats before it can even touch a model.pth, which yesterday's
+# training log measured at ~29G RSS for ONE dataset (54G once dataloaders
+# are built). The login node caps each user's cgroup at 32G total, so this
+# OOM-killed there every time, even after batching the 4 datasets
+# one-at-a-time -- a single dataset's load already blows the cap.
+# Usage:
+#   sbatch scripts/run_analysis.job analysis/<script>.py [script args...]
+#SBATCH --job-name=beamsurrogate-analysis
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=8
+#SBATCH --mem=96G
+#SBATCH --time=04:00:00
+#SBATCH --output=logs/%x_%j.log
+#SBATCH --error=logs/%x_%j.err
+#SBATCH --partition=medium
+set -euo pipefail
+
+REPO_ROOT="/home/aph25/Code_GH"     # <-- update to this repo's actual path on the cluster
+cd "$REPO_ROOT"
+mkdir -p logs
+
+if [[ $# -lt 1 ]]; then
+    echo "Usage: sbatch scripts/run_analysis.job analysis/<script>.py [args...]" >&2
+    exit 1
+fi
+SCRIPT="$1"
+shift
+
+# Best-effort rename so squeue shows the analysis script's own name instead
+# of the fixed --job-name above -- same trick run.job uses for run_id.
+scontrol update JobId="$SLURM_JOB_ID" JobName="$(basename "$SCRIPT" .py)" 2>/dev/null || true
+
+# Matches run.job's --cpus-per-task=8 (see its own comment for the
+# benchmarked rationale) -- analysis scripts here run the same torch
+# matmul-heavy rollout/FD code training does.
+export OMP_NUM_THREADS=8 MKL_NUM_THREADS=8 OPENBLAS_NUM_THREADS=8 NUMEXPR_NUM_THREADS=8 VECLIB_MAXIMUM_THREADS=8
+PYTHON=/home/aph25/Desktop/wave_env/bin/python
+
+time "$PYTHON" -u "$SCRIPT" "$@"
+echo "ANALYSIS DONE: $SCRIPT"

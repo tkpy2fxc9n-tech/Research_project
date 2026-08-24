@@ -1,5 +1,0 @@
-inherit: phase2
-run_id: p1_mback2
-phase: 1
-hypothesis: H2
-M_BACK: 2

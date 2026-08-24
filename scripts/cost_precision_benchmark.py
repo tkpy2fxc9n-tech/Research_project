@@ -53,7 +53,7 @@ from beamsurrogate.evaluate.rollout import RolloutResult, chrono  # noqa: E402
 OUT_DIR = REPO_ROOT / "runs" / "p13_cost_precision"
 SOURCE_RUN_ID = "p3_pinn_0"   # "etape 10" final model: M_BACK=3, N_FWD=2, features=[U],
                                 # HIDDEN_SIZES=[512,256,64], LAMBDA_PHYSICS=0 -- found under
-                                # its H6 (phase 3) name, but its config matches this campaign's
+                                # its phase-3 name, but its config matches this campaign's
                                 # settled architecture exactly.
 
 

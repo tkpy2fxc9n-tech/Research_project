@@ -1,5 +1,0 @@
-inherit: phase2
-run_id: p1_feat_all
-phase: 1
-hypothesis: H4
-features: [U, Ut, Uxx]

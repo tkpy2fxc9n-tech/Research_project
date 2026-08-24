@@ -1,9 +1,0 @@
-inherit: phase2
-run_id: p1_ndt2
-phase: 1
-hypothesis: null   # ndt sweep isn't in the original H1-H9 plan; assign an H-number if this becomes its own hypothesis
-ndt: 2
-# NOT actually covered for the pushforward campaign: the archived run this
-# comment used to point to (runs/Archives_runs/20260810_p0_baseline_ndt=2/,
-# job 148804) used regime: teacher_forcing, not pushforward -- needs a real
-# relaunch now that phase 2 picked pushforward (inherit: phase2 above).

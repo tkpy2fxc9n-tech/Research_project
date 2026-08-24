@@ -51,7 +51,7 @@ OUT_DIR = REPO_ROOT / "runs" / "p13_cost_scaling"
 N_VALUES = [200, 1000, 5000, 20000]
 
 # "etape 10" settled architecture/hyperparameters -- see
-# p11_coarse_r2.yaml's note: adjust if it settled on something else.
+# p9_coarse_r2.yaml's note: adjust if it settled on something else.
 BASE_KWARGS = dict(regime="pushforward", M_BACK=3, N_FWD=2, features=["U"],
                     LAMBDA_PHYSICS=0, HIDDEN_SIZES=(512, 256, 64))
 

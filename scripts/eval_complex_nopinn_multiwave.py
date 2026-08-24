@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-p7_dataset_complex was only ever visualized on ONE test trajectory
+p6_dataset_complex was only ever visualized on ONE test trajectory
 (rollout_idx = idx_test[0], see data/split.py) -- this reruns the SAME
 already-trained model on several different test trajectories from the
 complex dataset, to see how it behaves across a broader sample of waves
@@ -44,7 +44,7 @@ from beamsurrogate.evaluate import plots  # noqa: E402
 
 DATA_DIR = REPO_ROOT / "data"
 RUNS_DIR = REPO_ROOT / "runs"
-SOURCE_RUN_ID = "p7_dataset_complex"
+SOURCE_RUN_ID = "p6_dataset_complex"
 N_WAVES = 6
 
 

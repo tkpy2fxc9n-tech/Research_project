@@ -13,11 +13,11 @@ pip install -e .
 # 2. Generate the two canonical datasets (you run this yourself -- it can
 #    take a while at full scale; start with a small --n-trajectories to try
 #    the pipeline first).
-python scripts/make_dataset.py --profile simple  --n-trajectories 2000
-python scripts/make_dataset.py --profile complex --n-trajectories 2000
+python dataset/make_dataset.py --profile simple  --n-trajectories 2000
+python dataset/make_dataset.py --profile complex --n-trajectories 2000
 
 # 3. Sanity-check the physics before training anything
-python scripts/check_equivalence.py
+python checks/check_equivalence.py
 
 # 4. Run one experiment
 python -m beamsurrogate --config configs/runs/p0_baseline.yaml
@@ -30,22 +30,29 @@ python -m beamsurrogate --config configs/runs/p0_baseline.yaml --smoke-test
 
 ## How a run works
 
-Every run is one file under `configs/runs/`. It states only its
-**difference** from `configs/base.yaml`:
+Every run is one **self-contained** file under `configs/runs/` -- every
+field spelled out explicitly, nothing implicit or inherited from elsewhere.
+Open any one file and you see everything that run does, e.g. the top of
+`configs/runs/p2_mback3.yaml`:
 
 ```yaml
-inherit: base
-run_id: p1_mback3
-phase: 1
-hypothesis: H2
+run_id: p2_mback3
 M_BACK: 3
+...   # every other field the run uses, spelled out below
 ```
 
-`src/beamsurrogate/config.py`'s `load_config()` merges the `inherit` chain
-and applies any `--set KEY=VALUE` CLI overrides on top. String fields
-(`model`, `regime`, `stabilizer`, `dataset`) select a callable from
-`src/beamsurrogate/registry.py` -- that indirection is what replaces
-copying a whole project directory per experiment variant:
+No `phase` field: which phase a run belongs to is encoded only in its
+`run_id`/folder name (the `pN_` prefix) -- never duplicated as a separate
+value that could drift out of sync with the name.
+
+See [`GUIDE.md`](GUIDE.md) for a full walkthrough of how a config turns into
+a trained model, step by step, in plain language.
+
+`src/beamsurrogate/config.py`'s `load_config()` just reads the YAML and
+applies any `--set KEY=VALUE` CLI overrides on top -- no merging, no
+indirection. String fields (`model`, `regime`, `stabilizer`, `dataset`)
+select a callable from `src/beamsurrogate/registry.py` -- that indirection
+is what replaces copying a whole project directory per experiment variant:
 
 | field | values | selects |
 |---|---|---|
@@ -54,11 +61,12 @@ copying a whole project directory per experiment variant:
 | `stabilizer` | `none`, `noise`, `laplacian` | `registry.STABILIZERS` |
 | `dataset` | `simple`, `complex` | `registry.DATASETS` (which HDF5 file under `data/`) |
 
-**Adding a 28th run costs a new YAML file with `inherit: base` plus a
-handful of delta fields -- never a copy of `src/`.**
+**Adding a new run costs a new YAML file -- copy an existing one close to
+what you want, give it a new `run_id`, and change the fields that differ.
+Never a copy of `src/`.**
 
-From phase 3 onward, a run inherits the *winning* config of the previous
-phase instead of `base` directly -- see `configs/retained/README.md`.
+There is no `configs/base.yaml` or `configs/retained/` -- every value a run
+uses lives in that run's own YAML, nowhere else.
 
 ## Run folder contract
 
@@ -66,7 +74,7 @@ Every run writes `runs/<run_id>/`:
 
 ```
 runs/<run_id>/
-├── config.resolved.yaml   # the config AFTER merging inherit + overrides (every value, not just the delta)
+├── config.resolved.yaml   # the config AFTER applying --set overrides (every value; the run's own YAML is already self-contained)
 ├── env.json               # git sha (+dirty), dataset sha256, hostname, SLURM_JOB_ID, python/torch versions
 ├── metrics.json           # fixed schema -- see below
 ├── model.pth
@@ -84,7 +92,7 @@ without special-casing which run produced it. Built by
 `src/beamsurrogate/evaluate/metrics.py`:
 
 ```json
-{"run_id": "...", "phase": 1, "hypothesis": "H2",
+{"run_id": "...",
  "scalars": {"r2_onestep": null, "E_short": null, "t_div": null,
              "amp_loss_pct": null, "energy_drift_pct": null,
              "n_params": null, "train_time_s": null, "net_evals_per_unit_time": null,
@@ -109,7 +117,7 @@ it's reading:
   interval), Dirichlet only.
 
 **No run ever regenerates data on the fly.** Generate both with
-`scripts/make_dataset.py` (see Quickstart) *before* launching any run --
+`dataset/make_dataset.py` (see Quickstart) *before* launching any run --
 this also writes a `.sha256` sidecar next to the `.h5` file, which every
 run's `env.json` records.
 
@@ -125,13 +133,20 @@ src/beamsurrogate/    the package: physics/ (solver, waveforms, rod-network
                        (teacher_forcing, pushforward, bptt, stabilizers,
                        shared losses) · evaluate/ (rollout, metrics, plots)
                        · config.py · registry.py · cli.py
-configs/               base.yaml, runs/<run_id>.yaml (27 total), retained/
-analysis/              one script per hypothesis (h1_*.py ... h9_*.py),
-                       reads runs/*/metrics.json, writes figures/ -- a
-                       second, local pass over already-computed numbers,
-                       never re-runs training
-scripts/               make_dataset.py, check_equivalence.py, run.job,
-                       submit_array.sbatch
+configs/               runs/<run_id>.yaml (52 total, self-contained -- no
+                       base.yaml, no retained/, nothing else)
+analysis/              one script per phase-level comparison (p0_*.py ...
+                       p9_*.py), reads runs/*/metrics.json, writes
+                       figures/ -- a second, local pass over
+                       already-computed numbers, never re-runs training
+dataset/               make_dataset.py, make_coarse_dataset.py,
+                       make_dataset_nondim.py -- generate the HDF5 datasets,
+                       run once before any training, never called automatically
+checks/                check_equivalence.py, check_nondim_scaling.py --
+                       sanity checks to run before trusting a training run
+scripts/               run.job (Slurm launcher) + eval_*/cost_*_benchmark.py
+                       (one-off evaluations and benchmarks, not part of the
+                       main campaign, results not in metrics.json)
 archive/               every earlier project directory (Beam_surrogate_model/,
                        Graph_rods_network/, Tests/, Dataset/), moved here by
                        git mv once its useful code was ported into src/ --
@@ -144,10 +159,9 @@ Archives/               older, previously-archived work (untouched by this
 
 ```bash
 sbatch scripts/run.job configs/runs/p0_baseline.yaml   # one run
-sbatch scripts/submit_array.sbatch                                # every configs/runs/*.yaml, one array task each
 ```
 
-Both scripts hardcode `REPO_ROOT=/home/aph25/Code_GH` and
+`run.job` hardcodes `REPO_ROOT=/home/aph25/Code_GH` and
 `PYTHON=/home/aph25/Desktop/wave_env/bin/python` near the top -- update
 these to match wherever this checkout and venv actually live, and run
 `pip install -e .` once inside that venv so `python -m beamsurrogate`
@@ -155,12 +169,12 @@ resolves.
 
 ## Regression check
 
-`scripts/check_equivalence.py` verifies the differentiable torch physics
+`checks/check_equivalence.py` verifies the differentiable torch physics
 (`src/beamsurrogate/training/losses.py`, used by the `bptt`/`pushforward`
 regimes) reproduces the numpy reference physics
 (`src/beamsurrogate/physics/`) across all 7 signal families, before you
 spend compute on an actual training run:
 
 ```bash
-python scripts/check_equivalence.py
+python checks/check_equivalence.py
 ```

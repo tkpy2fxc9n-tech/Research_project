@@ -2,7 +2,7 @@
 # One parametrized Slurm job, replacing the 4 separate .job files each old
 # project directory used to carry (one per project, each with its own
 # copy-pasted absolute path). Usage:
-#   sbatch scripts/run.job configs/runs/<run_id>.yaml
+#   sbatch scripts/run.job runs/<phase>/<run_id>/config.yaml
 #
 # Assumes: (1) this repo is checked out at REPO_ROOT below (update it to
 # match your cluster home), (2) `pip install -e .` has been run once inside
@@ -24,9 +24,16 @@
 # wait for an entire node to sit fully idle before starting (observed
 # blocking heavy-feature/PINN runs behind other users' jobs for hours), a far
 # stricter wait than "somewhere with enough free memory."
-#SBATCH --time=20:00:00
+#SBATCH --time=24:00:00
 #SBATCH --output=logs/%x_%j.log
 #SBATCH --error=logs/%x_%j.err
+# --nodelist=fury,mohawk removed 2026-08-18: pinning two nodes by name also
+# pinned their memory ceiling, and fury only has 128G. A heavy config (e.g.
+# M_BACK=3 with features [U, Ut] = 138 inputs, ~110G peak) can then never be
+# scheduled there, and would sit queued or die on OOM for no reason. Letting
+# the partition choose lets Slurm match the job's --mem against every node
+# it has (dragon/gauntlet/mohawk are 256G, fury 128G) instead of against a
+# hand-picked pair.
 #SBATCH --partition=medium
 set -euo pipefail
 
@@ -42,7 +49,7 @@ mkdir -p logs
 # mohawk). Stale logs are cheap -- clean them up by hand instead.
 
 if [[ $# -lt 1 ]]; then
-    echo "Usage: sbatch scripts/run.job configs/runs/<run_id>.yaml" >&2
+    echo "Usage: sbatch scripts/run.job runs/<phase>/<run_id>/config.yaml" >&2
     exit 1
 fi
 CONFIG="$1"
@@ -51,7 +58,10 @@ CONFIG="$1"
 # (fixed at submit time, before this script -- and this run's config -- is
 # even read), making concurrent jobs indistinguishable. Best-effort and
 # non-fatal: scontrol being unsupported/denied must never take the run down.
-scontrol update JobId="$SLURM_JOB_ID" JobName="$(basename "$CONFIG" .yaml)" 2>/dev/null || true
+# A run's identity is its folder name (runs/<phase>/<run_id>/config.yaml),
+# NOT the filename "config.yaml" itself -- basename "$CONFIG" would give
+# "config" for every single run.
+scontrol update JobId="$SLURM_JOB_ID" JobName="$(basename "$(dirname "$CONFIG")")" 2>/dev/null || true
 
 # Matches --cpus-per-task above (NOT 1) -- benchmarked empirically: torch's
 # intra-op matmul threading gives ~5x throughput at BATCH_SIZE=4096 with 8
@@ -66,20 +76,20 @@ export OMP_NUM_THREADS=8 MKL_NUM_THREADS=8 OPENBLAS_NUM_THREADS=8 NUMEXPR_NUM_TH
 PYTHON=/home/aph25/Desktop/wave_env/bin/python
 
 # --output/--error above are fixed by Slurm at submit time (logs/%x_%j.log),
-# before this script -- let alone cfg.run_id inside the YAML -- has been
-# read, so Slurm can never write directly into runs/<run_id>/logs/. Instead,
-# copy the finished Slurm log there ourselves once run_id is known. %x
+# before this script -- let alone the run's own folder -- has been read, so
+# Slurm can never write directly into runs/<phase>/<run_id>/logs/. Instead,
+# copy the finished Slurm log there ourselves once the run dir is known. %x
 # resolves to the job name Slurm had when it opened the file, i.e. the
-# --job-name above (the scontrol rename at line 48 happens too late to
-# affect it), which is exactly $SLURM_JOB_NAME's value for the rest of this
+# --job-name above (the scontrol rename above happens too late to affect
+# it), which is exactly $SLURM_JOB_NAME's value for the rest of this
 # script's life. A trap (not a line after the python call) so the log is
 # still copied if the run dies partway through.
 save_slurm_log() {
-    local run_id
-    run_id="$(basename "$CONFIG" .yaml)"
-    mkdir -p "runs/$run_id/logs"
-    cp -f "logs/${SLURM_JOB_NAME}_${SLURM_JOB_ID}.log" "runs/$run_id/logs/" 2>/dev/null || true
-    cp -f "logs/${SLURM_JOB_NAME}_${SLURM_JOB_ID}.err" "runs/$run_id/logs/" 2>/dev/null || true
+    local run_dir
+    run_dir="$(dirname "$CONFIG")"
+    mkdir -p "$run_dir/logs"
+    cp -f "logs/${SLURM_JOB_NAME}_${SLURM_JOB_ID}.log" "$run_dir/logs/" 2>/dev/null || true
+    cp -f "logs/${SLURM_JOB_NAME}_${SLURM_JOB_ID}.err" "$run_dir/logs/" 2>/dev/null || true
 }
 trap save_slurm_log EXIT
 

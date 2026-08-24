@@ -85,7 +85,11 @@ def reconstruct_general(u_curr, n_curr, pred_norm, bc_left: BCSpec, bc_right: BC
 
 def compute_rest_bias(model, mu_in, sd_in, mu_out, sd_out, cfg):
     # Network output for a zero input, subtracted from the rollout so the
-    # resting zone stays at 0.
+    # resting zone stays at 0. Gated by cfg.BIAS_SUPPRESSION (phase 10b) --
+    # False returns a zero bias, i.e. every caller's `deltas - rest_bias`
+    # becomes a no-op subtraction.
+    if not cfg.BIAS_SUPPRESSION:
+        return np.zeros_like(mu_out)
     Xz = (np.zeros((len(cfg.nodes), len(mu_in)), dtype=np.float32) - mu_in) / sd_in
     with torch.no_grad():
         return (model(torch.tensor(Xz)).numpy() * sd_out + mu_out)[0]

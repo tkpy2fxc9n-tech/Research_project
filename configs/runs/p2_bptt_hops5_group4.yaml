@@ -1,8 +1,0 @@
-inherit: base
-run_id: p2_bptt_hops5_group4
-phase: 2
-hypothesis: H5
-regime: bptt
-LAMBDA_PHYSICS: 0   # isolate H5 (regime) from H6 (PINN residual weight, tested separately)
-TBPTT_HOPS: 5
-GROUP_SIZE: 4

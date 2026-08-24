@@ -1,5 +1,0 @@
-inherit: base
-run_id: p5_laplacian
-phase: 5
-hypothesis: H8
-stabilizer: laplacian

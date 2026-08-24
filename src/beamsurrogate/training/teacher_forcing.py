@@ -2,7 +2,7 @@
 # from a real ground-truth M_BACK window, backpropagates the averaged error,
 # steps -- no autoregressive rollout, no pushforward. Ported from
 # Beam_surrogate_model/training/code/commun.py's `train_model`. Input-noise
-# augmentation (cfg.NOISE_STD, H8) was already active here in the source
+# augmentation (cfg.NOISE_STD, phase 10) was already active here in the source
 # project despite a stale comment claiming otherwise -- kept, not
 # reintroduced.
 from __future__ import annotations
