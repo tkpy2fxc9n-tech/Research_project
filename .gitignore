@@ -49,6 +49,9 @@ archives/**/outputs/**
 # experiments and CANNOT be regenerated: the datasets they were made from are
 # not versioned and no longer exist anywhere.
 !archives/**/*.png
+# ...and the trained weights of those legacy experiments, for the same
+# reason: the compute that produced them is not coming back.
+!archives/**/*.pth
 archives/**/*.h5
 archives/**/*.gif
 archives/**/*.npz
