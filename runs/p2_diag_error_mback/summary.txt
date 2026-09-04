@@ -1,0 +1,5 @@
+p2_diag_error_mback -- max rollout error over time vs M_BACK
+
+M_BACK=1 (source: p2_mback1): final err_max=3.2859e-03  peak err_max=4.8441e-03
+M_BACK=2 (reference) (source: p2_reference): final err_max=1.4864e-04  peak err_max=3.7265e-04
+M_BACK=3 (source: p2_mback3): final err_max=5.8958e-04  peak err_max=5.9026e-04

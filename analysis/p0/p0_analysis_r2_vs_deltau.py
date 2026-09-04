@@ -61,6 +61,7 @@ def r2_vs_rollout() -> bool:
         source_metrics = yaml.safe_load(f)
 
     r2 = source_metrics["scalars"]["r2_onestep"]
+    t_div = source_metrics["scalars"].get("t_div")   # 10%-of-peak-amplitude divergence time, see compute_t_div
     curves = source_metrics["curves"]
     if r2 is None or not curves["t"]:
         print(f"WARNING: {source_metrics_path} is missing r2_onestep or curves.t -- "
@@ -77,17 +78,35 @@ def r2_vs_rollout() -> bool:
         ("err_rel_mean", "relative L2 error (rollout)", "tab:blue", "o", "r2_vs_rollout_relerr.png"),
         ("err_max", "max absolute error (rollout)", "tab:orange", "s", "r2_vs_rollout_maxerr.png"),
     ):
+        is_maxerr = key == "err_max"   # r2_vs_rollout_maxerr.png only: no title/R^2 box, growth rate in legend instead
+        label = ylabel
+        if is_maxerr:
+            # err_max blows up several orders of magnitude over the rollout (unstabilized
+            # autoregressive divergence) and eventually overflows to NaN -- a plain linear
+            # slope is meaningless (dominated by the last finite points) and can itself be
+            # NaN. Fit log(err_max) vs t instead: its slope k is the exponential growth
+            # rate (err_max(t) ~= err_max(0) * exp(k*t)), reported here via its doubling time.
+            t_arr = np.asarray(curves["t"][:n])
+            e_arr = np.asarray(curves[key][:n])
+            mask = np.isfinite(e_arr) & (e_arr > 0)
+            k, _ = np.polyfit(t_arr[mask], np.log(e_arr[mask]), 1)
+            label = f"{ylabel} (growth rate k ≈ {k:.2f}/s)"
+
         fig, ax = plt.subplots(figsize=(9, 5))
-        ax.plot(curves["t"][:n], curves[key][:n], marker + "-", ms=3, color=color, label=ylabel)
+        ax.plot(curves["t"][:n], curves[key][:n], marker + "-", ms=3, color=color, label=label)
         ax.set_yscale("log")
-        ax.set_xlabel("t")
-        ax.set_ylabel("error (log)")
+        ax.set_xlabel("time (s)" if is_maxerr else "t", fontsize=14)
+        ax.set_ylabel("error (log)", fontsize=14)
+        ax.tick_params(axis="both", labelsize=12)
         ax.grid(True, which="both")
+        if is_maxerr and t_div is not None:
+            ax.axvline(t_div, color="red", linestyle="--", label=f"Thr10% (t={t_div:.2f})")
         ax.legend(loc="upper left")
-        ax.set_title(f"one-step R² = {r2:.3f} vs {ylabel} over time ({R2_SOURCE_RUN_ID})")
-        ax.annotate(f"one-step R² = {r2:.3f}\n(looks excellent -- see how it holds up in rollout)",
-                    xy=(0.98, 0.05), xycoords="axes fraction", ha="right", va="bottom",
-                    fontsize=10, bbox=dict(boxstyle="round", fc="white", ec="gray"))
+        if not is_maxerr:
+            ax.set_title(f"one-step R² = {r2:.3f} vs {ylabel} over time ({R2_SOURCE_RUN_ID})")
+            ax.annotate(f"one-step R² = {r2:.3f}\n(looks excellent -- see how it holds up in rollout)",
+                        xy=(0.98, 0.05), xycoords="axes fraction", ha="right", va="bottom",
+                        fontsize=10, bbox=dict(boxstyle="round", fc="white", ec="gray"))
         plt.tight_layout()
         plt.savefig(figures_dir / filename, dpi=150, bbox_inches="tight")
         plt.close()

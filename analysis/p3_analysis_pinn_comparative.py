@@ -46,12 +46,13 @@ from pathlib import Path
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+import numpy as np
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT / "analysis"))
 from _common import (  # noqa: E402
-    fmt_pct_mean_std, fmt_sci_mean_std, fmt_time_censored, load_multi_summary, load_run_metrics,
-    fmt_pct_mean_std_readable, fmt_sci_mean_std_readable, fmt_time_censored_readable,
+    fmt_pct_median, fmt_sci_median, fmt_time_censored, load_multi_summary, load_run_metrics,
+    fmt_pct_median_readable, fmt_sci_median_readable, fmt_time_censored_readable,
     readable_metric_notes, render_latex_table, render_readable_table, MISSING_ROW,
 )
 
@@ -88,20 +89,22 @@ def build_table(summaries: dict) -> str:
             continue
         rows.append([
             row_label,
-            fmt_pct_mean_std(s["P_thr_5pct"]["mean"], s["P_thr_5pct"]["std"]),
+            fmt_pct_median(s["P_thr_5pct"]["median"]),
             fmt_time_censored(s["T_max_5pct"]["median_reached"], s["T_max_5pct"]["pct_reached"]),
             fmt_time_censored(s["T_max_10pct"]["median_reached"], s["T_max_10pct"]["pct_reached"]),
             fmt_time_censored(s["T_mean_5pct"]["median_reached"], s["T_mean_5pct"]["pct_reached"]),
             fmt_time_censored(s["T_mean_10pct"]["median_reached"], s["T_mean_10pct"]["pct_reached"]),
-            fmt_sci_mean_std(s["E_short"]["mean"], s["E_short"]["std"]),
-            fmt_sci_mean_std(s["E_max"]["mean"], s["E_max"]["std"]),
+            fmt_sci_median(s["E_short"]["median"]),
+            fmt_sci_median(s["E_max"]["median"]),
         ])
     n = next((s["n_trajectories"] for s in summaries.values() if s), "?")
     return render_latex_table(
         caption=f"Comparison of performances depending on a PINN loss term, evaluated by "
                 f"autoregressive rollout on $N={n}$ held-out test trajectories. "
                 f"$P_{{\\mathrm{{thr}}}}$, $E_{{\\mathrm{{short}}}}$ and $E_{{\\max}}$ are reported "
-                f"as mean $\\pm$ std across trajectories. $T_{{5\\%}}$/$T_{{10\\%}}$ columns are "
+                f"as the median across trajectories (robust to the handful of outlier trajectories "
+                f"that diverge to extreme values, which would otherwise dominate a mean). "
+                f"$T_{{5\\%}}$/$T_{{10\\%}}$ columns are "
                 f"right-censored (not every trajectory reaches the threshold within the simulated "
                 f"window); each cell reports the median crossing time among trajectories that "
                 f"reached it, with the fraction that reached it in parentheses.",
@@ -123,13 +126,13 @@ def build_readable_table(summaries: dict) -> str:
             continue
         rows.append([
             label,
-            fmt_pct_mean_std_readable(s["P_thr_5pct"]["mean"], s["P_thr_5pct"]["std"]),
+            fmt_pct_median_readable(s["P_thr_5pct"]["median"]),
             fmt_time_censored_readable(s["T_max_5pct"]["median_reached"], s["T_max_5pct"]["pct_reached"]),
             fmt_time_censored_readable(s["T_max_10pct"]["median_reached"], s["T_max_10pct"]["pct_reached"]),
             fmt_time_censored_readable(s["T_mean_5pct"]["median_reached"], s["T_mean_5pct"]["pct_reached"]),
             fmt_time_censored_readable(s["T_mean_10pct"]["median_reached"], s["T_mean_10pct"]["pct_reached"]),
-            fmt_sci_mean_std_readable(s["E_short"]["mean"], s["E_short"]["std"]),
-            fmt_sci_mean_std_readable(s["E_max"]["mean"], s["E_max"]["std"]),
+            fmt_sci_median_readable(s["E_short"]["median"]),
+            fmt_sci_median_readable(s["E_max"]["median"]),
         ])
     table = render_readable_table(
         header_cells=["Strategy", "P_thr_5%", "T_max_5%", "T_max_10%",
@@ -138,7 +141,8 @@ def build_readable_table(summaries: dict) -> str:
     )
     notes = readable_metric_notes({"P_thr_5pct", "T_max_5pct", "T_mean_5pct", "E_short", "E_max"})
     n = next((s["n_trajectories"] for s in summaries.values() if s), "?")
-    notes.append(f"(mean +/- std / median (%reached) across N={n} held-out test trajectories)")
+    notes.append(f"(median across trajectories; T_* columns show median (%reached) among "
+                 f"trajectories that crossed the threshold; N={n} held-out test trajectories)")
     return table + "\n\n" + "\n".join(notes) + "\n"
 
 
@@ -161,7 +165,6 @@ def plot_loss_split(metrics_by_run: dict, figures_dir: Path) -> None:
     ax.set_ylabel(r"$L_{\mathrm{data}}$ (validation)")
     ax.grid(True, which="both")
     ax.legend()
-    ax.set_title("Data loss (validation) vs epoch")
     plt.tight_layout()
     plt.savefig(figures_dir / "pinn_ldata_val.png", dpi=150, bbox_inches="tight")
     plt.close()
@@ -187,11 +190,64 @@ def plot_loss_split(metrics_by_run: dict, figures_dir: Path) -> None:
     ax.set_ylabel(r"$R_{\mathrm{phys}}$ (validation, unweighted)")
     ax.grid(True, which="both")
     ax.legend()
-    ax.set_title("Unweighted PDE residual (validation) vs epoch -- PINN=0 excluded (never computed)")
     plt.tight_layout()
     plt.savefig(figures_dir / "pinn_rphys_val.png", dpi=150, bbox_inches="tight")
     plt.close()
     print(f"Saved {figures_dir / 'pinn_ldata_val.png'} and {figures_dir / 'pinn_rphys_val.png'}")
+
+
+def plot_mechanical_energy_comparison(curves: dict, figures_dir: Path) -> dict:
+    # Overlay FD reference vs predicted mechanical energy for lambda=0 (no
+    # PINN loss), lambda=0.01, and lambda=0.1 -- same trajectory/energy
+    # definition as _mechanical_energy (metrics.py), already computed into
+    # curves["t"]/["energy"]/["energy_ref"] by compute_error_curves.
+    # energy_ref is identical across runs (shared reference trajectory, see
+    # SAME REFERENCE TRAJECTORY note above), so any run's copy works --
+    # reads from the lambda=0.01 run's.
+    c0, c01, c1 = curves["PINN=0"], curves["PINN=0.01"], curves["PINN=0.1"]
+    t = c01["t"]
+    energy_ref, energy_0, energy_001, energy_01 = c01["energy_ref"], c0["energy"], c01["energy"], c1["energy"]
+
+    integ_ref = float(np.trapz(energy_ref, t))
+    integ_0 = float(np.trapz(energy_0, t))
+    integ_001 = float(np.trapz(energy_001, t))
+    integ_01 = float(np.trapz(energy_01, t))
+
+    fig, ax = plt.subplots(figsize=(9, 5))
+    ax.plot(t, energy_ref, "-", color="red", label="FD reference")
+    ax.plot(t, energy_0, "--", color="orange", label=r"predicted, no PINN")
+    ax.plot(t, energy_001, "--", color="blue", label=r"predicted, $\lambda=0.01$")
+    ax.plot(t, energy_01, "--", color="green", label=r"predicted, $\lambda=0.1$")
+    ax.set_xlabel("time (s)", fontsize=14)
+    ax.set_ylabel("mechanical energy (N/m)", fontsize=14)
+    ax.tick_params(axis="both", labelsize=14)
+    ax.grid(True)
+    # Side by side, both inside the axes at the bottom right -- the only
+    # corner clear of every curve (they all rise well above y~0.00006 by
+    # t~1 and never come back down). Legend anchored just left of the ∫E dt
+    # box below, both sitting on the same bottom baseline.
+    ax.legend(loc="upper right", bbox_to_anchor=(0.53, 0.288), borderaxespad=0, fontsize=14)
+    # Plain unicode (no mathtext $...$) + a monospace font, so the manual
+    # column padding below actually lines up -- mathtext glyphs and the
+    # default proportional font both ignore space-padding width.
+    rows = [
+        ("FD reference", integ_ref),
+        ("λ = 0", integ_0),
+        ("λ = 0.01", integ_001),
+        ("λ = 0.1", integ_01),
+    ]
+    label_width = max(len(label) for label, _ in rows) + 1  # +1 for the ":"
+    textstr = "∫ E dt (N·s·m⁻¹)\n" + "\n".join(
+        f"{(label + ':'):<{label_width}} {value:.4e}" for label, value in rows
+    )
+    # Bottom-right corner, right next to the legend above.
+    ax.text(0.98, 0.02, textstr, transform=ax.transAxes, ha="right", va="bottom",
+            fontsize=14, fontfamily="monospace", bbox=dict(facecolor="white", edgecolor="gray", alpha=0.9))
+    plt.tight_layout()
+    plt.savefig(figures_dir / "mechanical_energy_vs_time_p3_pinn_0.01_vs_0.1.png", dpi=150, bbox_inches="tight")
+    plt.close()
+
+    return {"integ_ref": integ_ref, "integ_0": integ_0, "integ_001": integ_001, "integ_01": integ_01}
 
 
 def main():
@@ -217,26 +273,37 @@ def main():
     print(table_readable)
     print(f"Saved {run_dir / 'table_readable.txt'}")
 
-    fig, ax = plt.subplots(figsize=(9, 5))
+    fig, ax = plt.subplots(figsize=(13, 6))   # taller than the default 9x5: at this fontsize
+                                                 # the rotated ylabel needs the extra height or
+                                                 # bbox_inches="tight" clips its tail
     for (label, c), marker in zip(curves.items(), MARKERS):
         ax.plot(c["t"], c["err_max"], marker, ms=3, label=label)
     ax.set_yscale("log")
-    ax.set_xlabel("t")
-    ax.set_ylabel("max absolute error along the beam (log)")
+    ax.set_xlabel("time (s)", fontsize=17)
+    ax.set_ylabel("max absolute error along the beam (log)", fontsize=17)
+    ax.tick_params(axis="both", labelsize=17)
     ax.grid(True, which="both")
-    ax.legend()
-    ax.set_title("max rollout error over time vs PINN residual weight")
+    ax.legend(fontsize=17)
     plt.tight_layout()
     plt.savefig(figures_dir / "error_pinn.png", dpi=150, bbox_inches="tight")
     plt.close()
 
     plot_loss_split(metrics_by_run, figures_dir)
 
+    integ = plot_mechanical_energy_comparison(curves, figures_dir)
+    print(f"Saved {figures_dir / 'mechanical_energy_vs_time_p3_pinn_0.01_vs_0.1.png'}")
+
     summary_lines = [f"{RUN_ID} -- max rollout error vs LAMBDA_PHYSICS\n"]
     for label, source_run_id in SOURCES.items():
         e_stats = curves[label]["err_max"]
         summary_lines.append(f"{label} (source: {source_run_id}): "
                               f"final err_max={e_stats[-1]:.4e}  peak err_max={max(e_stats):.4e}")
+    summary_lines.append("")
+    summary_lines.append("Integrated mechanical energy, int E(t) dt over the rollout window (N*s/m):")
+    summary_lines.append(f"  FD reference: {integ['integ_ref']:.6e}")
+    summary_lines.append(f"  lambda=0:     {integ['integ_0']:.6e}")
+    summary_lines.append(f"  lambda=0.01:  {integ['integ_001']:.6e}")
+    summary_lines.append(f"  lambda=0.1:   {integ['integ_01']:.6e}")
     summary = "\n".join(summary_lines) + "\n"
     (run_dir / "summary.txt").write_text(summary)
     print(summary)

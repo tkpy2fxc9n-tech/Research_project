@@ -1,0 +1,18 @@
+p17 rectangular assembly -- p7_dataset_medium_pinn_0.01
+94-rod triangular lattice, held-out test trajectory (triangular_idx891), 10.0s rollout
+
+PEAK DISPLACEMENT
+  FD peak |u|            : 0.009351
+  NN peak |u|            : 0.009278
+  ratio NN/FD            : 0.992
+
+FD vs NN DIFFERENCE (over every lattice point, all frames)
+  absolute max |FD-NN|   : 0.006474
+  absolute mean |FD-NN|  : 0.000352
+  relative max  (% of FD peak) : 69.24%
+  relative mean (% of FD peak) : 3.77%
+
+COMPUTATIONAL TIME -- measured on THIS lattice, not a single isolated rod
+  FD wall time           : 1.827 s (full 10.0s rollout, 94 rods)
+  NN wall time           : 14.052 s
+  NN / FD wall-time ratio: 7.69x (slower)

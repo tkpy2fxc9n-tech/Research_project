@@ -1,0 +1,61 @@
+=== beamsurrogate [run] run_id=p1_feat_u model=mlp regime=pushforward stabilizer=none dataset=simple features=['U'] ===
+[mem] start: 0.58 Go
+Loaded 2000 trajectories from /home/aph25/Code_GH/data/beam_dataset_simple.h5
+Split distribution (from dataset):
+  train : 1817 simulations (90.8 %)
+  val   :   84 simulations (4.2 %)
+  test  :   99 simulations (5.0 %)
+[mem] after load_hdf5_dataset: 20.61 Go
+[mem] after compute_norm_stats: 20.61 Go
+MLP(
+  (net): Sequential(
+    (0): Linear(in_features=46, out_features=512, bias=True)
+    (1): GELU(approximate='none')
+    (2): Linear(in_features=512, out_features=256, bias=True)
+    (3): GELU(approximate='none')
+    (4): Linear(in_features=256, out_features=64, bias=True)
+    (5): GELU(approximate='none')
+    (6): Linear(in_features=64, out_features=3, bias=True)
+  )
+)
+Parameters: 172,035
+[mem] after make_dataloaders: 38.33 Go
+[mem] after trimming df to test split: 19.81 Go
+Epoch    1/100  --  data: 0.0156  |  pushforward: 0.4463  |  L2 rel error (val): 1.2975
+Epoch    2/100  --  data: 0.0102  |  pushforward: 0.2543  |  L2 rel error (val): 7.8689
+Epoch    3/100  --  data: 0.0103  |  pushforward: 0.2132  |  L2 rel error (val): 0.9306
+Epoch    4/100  --  data: 0.0099  |  pushforward: 0.1888  |  L2 rel error (val): 0.8516
+Epoch    5/100  --  data: 0.0099  |  pushforward: 0.1699  |  L2 rel error (val): 0.8419
+Epoch    6/100  --  data: 0.0085  |  pushforward: 0.1460  |  L2 rel error (val): 0.8371
+Epoch    7/100  --  data: 0.0078  |  pushforward: 0.1363  |  L2 rel error (val): 0.8275
+Epoch    8/100  --  data: 0.0068  |  pushforward: 0.1149  |  L2 rel error (val): 0.8338
+Epoch    9/100  --  data: 0.0062  |  pushforward: 0.1076  |  L2 rel error (val): 0.8354
+Epoch   10/100  --  data: 0.0060  |  pushforward: 0.1005  |  L2 rel error (val): 0.8409
+Epoch   11/100  --  data: 0.0057  |  pushforward: 0.0951  |  L2 rel error (val): 0.8646
+Epoch   12/100  --  data: 0.0056  |  pushforward: 0.0934  |  L2 rel error (val): 0.8270
+Epoch   13/100  --  data: 0.0051  |  pushforward: 0.0836  |  L2 rel error (val): 0.8285
+Epoch   14/100  --  data: 0.0048  |  pushforward: 0.0791  |  L2 rel error (val): 36381387.2105
+Epoch   15/100  --  data: 0.0048  |  pushforward: 0.0786  |  L2 rel error (val): 0.8355
+Epoch   16/100  --  data: 0.0046  |  pushforward: 0.0751  |  L2 rel error (val): 0.8261
+Epoch   17/100  --  data: 0.0045  |  pushforward: 0.0734  |  L2 rel error (val): 0.8384
+Epoch   18/100  --  data: 0.0042  |  pushforward: 0.0687  |  L2 rel error (val): 0.8507
+Epoch   19/100  --  data: 0.0042  |  pushforward: 0.0677  |  L2 rel error (val): 0.8312
+Epoch   20/100  --  data: 0.0038  |  pushforward: 0.0611  |  L2 rel error (val): 0.8271
+Epoch   21/100  --  data: 0.0038  |  pushforward: 0.0624  |  L2 rel error (val): 0.8300
+Epoch   22/100  --  data: 0.0037  |  pushforward: 0.0605  |  L2 rel error (val): 0.8308
+Epoch   23/100  --  data: 0.0038  |  pushforward: 0.0602  |  L2 rel error (val): 0.8326
+Epoch   24/100  --  data: 0.0036  |  pushforward: 0.0581  |  L2 rel error (val): 1.0623
+Epoch   25/100  --  data: 0.0036  |  pushforward: 0.0581  |  L2 rel error (val): 0.8264
+Epoch   26/100  --  data: 0.0035  |  pushforward: 0.0582  |  L2 rel error (val): 446227337509681.8750
+Epoch   27/100  --  data: 0.0034  |  pushforward: 0.0544  |  L2 rel error (val): 0.8330
+Epoch   28/100  --  data: 0.0035  |  pushforward: 0.0562  |  L2 rel error (val): 0.8300
+Epoch   29/100  --  data: 0.0034  |  pushforward: 0.0545  |  L2 rel error (val): 0.8284
+Epoch   30/100  --  data: 0.0031  |  pushforward: 0.0506  |  L2 rel error (val): 53384487709123616768.0000
+Epoch   31/100  --  data: 0.0032  |  pushforward: 0.0507  |  L2 rel error (val): 3.0170
+Early stopping at epoch 31: val loss hasn't improved for 15 epochs (best=0.826130).
+Best model reloaded -- minimum L2 rel error (val): 0.826130
+[mem] after training: 20.13 Go
+[mem] after evaluate_one_step: 20.24 Go
+[mem] after rollout + benchmark: 20.24 Go
+Done -- outputs in /home/aph25/Code_GH/runs/p1_feat_u
+RUN DONE: configs/runs/p1_feat_u.yaml

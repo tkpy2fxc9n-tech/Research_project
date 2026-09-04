@@ -9,9 +9,27 @@ outputs/
 # beamsurrogate campaign layout
 *.egg-info/
 /data/
-/runs/
 /figures/
 /logs/
+
+# runs/: the heavy outputs are machine-local and fully regenerable, but the
+# small artifacts that make the results readable *without* re-running
+# anything are versioned: figures (*.png), metrics (*.json/*.csv/*.txt),
+# resolved configs (*.yaml) and trained weights (*.pth, ~50 MB total).
+# Deliberately excluded: *.npz raw prediction arrays (~5.3 GB) and *.gif
+# animations (~400 MB) -- both re-created by re-running the analysis scripts.
+# Note: the `!` rules below must stay AFTER the global `*.pth` rule above,
+# since the last matching pattern wins.
+/runs/**
+!/runs/**/
+!/runs/**/*.png
+!/runs/**/*.json
+!/runs/**/*.csv
+!/runs/**/*.txt
+!/runs/**/*.yaml
+!/runs/**/*.yml
+!/runs/**/*.log
+!/runs/**/*.pth
 
 # generated artifacts left behind inside archived legacy projects (not
 # source -- training logs/plots/outputs re-created by re-running old code)

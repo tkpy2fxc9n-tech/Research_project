@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # Phase 1: 2-curve version of pushforward_vs_bptt.py, restricted to the
 # "loss val" pair specifically retained for phase 1: pushforward (labelled
-# "Pushforward") vs bptt (labelled "FBPTT"). Two separate figures: max
+# "Pushforward") vs bptt (labelled "TBPTT"). Two separate figures: max
 # absolute rollout error (err_max) and mean absolute rollout error
 # (err_mean_abs, see evaluate/metrics.py's compute_error_curves --
 # physical-unit mean over the beam, not the L2-ratio err_rel_mean). These
@@ -46,7 +46,7 @@ MULTI_SUMMARY_PATH = RUN_DIR / "multi_trajectory_summary.json"
 
 SOURCES = {
     "Pushforward": "p1_pushforward",
-    "FBPTT": "p1_bptt",
+    "TBPTT": "p1_bptt",
 }
 N_TAIL_DROP = 2
 
@@ -159,16 +159,48 @@ def main():
         ("err_max", "max absolute error along the beam (log)", "error_max_pushforward_vs_fbptt.png"),
         ("err_mean_abs", "mean absolute error over the beam (log)", "error_mean_pushforward_vs_fbptt.png"),
     ):
-        fig, ax = plt.subplots(figsize=(9, 5))
-        markers = {"Pushforward": "s-", "FBPTT": "o-"}
+        fig, ax = plt.subplots(figsize=(9, 6.5))   # taller than the other p0/p1 figures: at this
+                                                     # fontsize the rotated ylabel needs the extra
+                                                     # height or bbox_inches="tight" clips its tail
+        markers = {"Pushforward": "s-", "TBPTT": "o-"}
         for label, c in curves.items():
             ax.plot(c["t"][:-N_TAIL_DROP], c[field][:-N_TAIL_DROP], markers[label], ms=3, label=label)
         ax.set_yscale("log")
+        ax.set_xlabel("time (s)", fontsize=17)
+        ax.set_ylabel(ylabel, fontsize=17)
+        ax.tick_params(axis="both", labelsize=17)
+        ax.grid(True, which="both")
+        ax.legend(fontsize=17)
+        plt.tight_layout()
+        out_path = FIGURES_DIR / fname
+        plt.savefig(out_path, dpi=150, bbox_inches="tight")
+        plt.close()
+        print(f"Saved {out_path}")
+
+    # Same two fields, but TBPTT's error divided by Pushforward's at each timestep
+    # instead of the two curves overlaid -- how many times worse/better TBPTT is,
+    # directly. Both regimes share the exact same rollout time grid (see the `t`
+    # arrays above), so this is a plain elementwise ratio, no interpolation needed.
+    for field, ylabel, fname in (
+        ("err_max", "TBPTT / Pushforward -- max absolute error ratio", "error_max_ratio_fbptt_over_pushforward.png"),
+        ("err_mean_abs", "TBPTT / Pushforward -- mean absolute error ratio",
+         "error_mean_ratio_fbptt_over_pushforward.png"),
+    ):
+        t = curves["Pushforward"]["t"][:-N_TAIL_DROP]
+        pf = curves["Pushforward"][field][:-N_TAIL_DROP]
+        bp = curves["TBPTT"][field][:-N_TAIL_DROP]
+        ratio = [b / p if p != 0 else float("nan") for b, p in zip(bp, pf)]
+
+        fig, ax = plt.subplots(figsize=(9, 5))
+        ax.plot(t, ratio, "d-", ms=3, color="tab:purple")
+        ax.axhline(1.0, color="gray", linestyle="--", lw=1, label="ratio = 1 (equal error)")
         ax.set_xlabel("t")
         ax.set_ylabel(ylabel)
-        ax.grid(True, which="both")
+        ax.minorticks_on()   # linear axes have no minor ticks by default -- unlike the log-scale
+                              # plots above, "which='both'" below is a no-op without this first
+        ax.grid(True, which="major")
+        ax.grid(True, which="minor", alpha=0.3, linestyle=":")
         ax.legend()
-        ax.set_title(f"Pushforward vs FBPTT -- {ylabel.split(' (')[0]} over time")
         plt.tight_layout()
         out_path = FIGURES_DIR / fname
         plt.savefig(out_path, dpi=150, bbox_inches="tight")

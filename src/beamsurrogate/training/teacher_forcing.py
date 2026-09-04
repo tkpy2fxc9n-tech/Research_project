@@ -58,7 +58,7 @@ def run(model, train_loader, X_val, y_val, cfg, model_path: Path, patience: int 
         model.eval()
         with torch.no_grad():
             pred_val = model(torch.tensor(X_val)).numpy()
-        val_loss = ((pred_val - y_val) ** 2).mean()
+        val_loss = float(((pred_val - y_val) ** 2).mean())
         scheduler.step(val_loss)
 
         train_history.append(train_loss)

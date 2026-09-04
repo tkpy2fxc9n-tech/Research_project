@@ -46,12 +46,12 @@ def reconstruct_train_total(cfg, train_history: list, extra_history: dict) -> li
 def plot_training_curve(train_result, output_dir: Path, cfg):
     total_train = reconstruct_train_total(cfg, train_result.train_history, train_result.extra_history)
 
-    fig, ax = plt.subplots(figsize=(8, 4))
+    fig, ax = plt.subplots(figsize=(8, 5))
     ax.plot(total_train, "-", label="train")
     ax.plot(train_result.val_history, "--", label="val")
-    ax.set_xlabel("Epoch"); ax.set_ylabel("Loss")
-    ax.set_title("Learning curve")
-    ax.set_yscale("log"); ax.legend(); ax.grid(True)
+    ax.set_xlabel("Epoch", fontsize=17); ax.set_ylabel("Loss", fontsize=17)
+    ax.set_yscale("log"); ax.legend(fontsize=17); ax.grid(True)
+    ax.tick_params(axis="both", labelsize=17)
     plt.tight_layout()
     plt.savefig(output_dir / _tagged("training_curves.png", cfg), dpi=150, bbox_inches="tight")
     plt.close()
@@ -90,9 +90,10 @@ def plot_training_curve_active_components(train_result, output_dir: Path, cfg):
 
     total_train = reconstruct_train_total(cfg, train_history, extra_history)
     active = {name: v for name, v in components.items() if max(v[0]) > 0}
-    dropped = [name for name in components if name not in active]
 
-    fig, ax = plt.subplots(figsize=(8.5, 5))
+    fig, ax = plt.subplots(figsize=(13, 7))   # taller than the default 8.5x5: room for the
+                                                   # larger fonts below without the legend or
+                                                   # ylabel getting clipped by bbox_inches="tight"
     ax.plot(epochs, total_train, "-", color="black", lw=2, label="total (train)")
     ax.plot(epochs, train_result.val_history, "--", color="black", lw=2, label="total (val)")
     colors = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100"]
@@ -103,30 +104,30 @@ def plot_training_curve_active_components(train_result, output_dir: Path, cfg):
         if val_raw:
             val_weighted = [wi * ri for wi, ri in zip(w, val_raw)]
             ax.plot(epochs, val_weighted, "--", color=color, lw=1.4, label=f"{name} (val, weighted)")
-    ax.set_xlabel("Epoch")
-    ax.set_ylabel("Loss (weighted)")
+    ax.set_xlabel("Epoch", fontsize=19)
+    ax.set_ylabel("Loss (weighted)", fontsize=19)
     ax.set_yscale("log")
+    ax.tick_params(axis="both", labelsize=19)
     ax.grid(True, which="both", alpha=0.3)
-    ax.legend(fontsize=9)
-    title_extra = f" -- {', '.join(dropped)} excluded (weight=0)" if dropped else ""
-    ax.set_title(f"Learning curve by component -- solid=train, dashed=val{title_extra}")
+    ax.legend(fontsize=15, loc="lower left")
     plt.tight_layout()
     plt.savefig(output_dir / _tagged("training_curve_active_components.png", cfg), dpi=150, bbox_inches="tight")
     plt.close()
 
 
 def plot_rollout_error(curves: dict, output_dir: Path, cfg, t_div: float | None = None):
-    plt.figure(figsize=(9, 5))
-    plt.plot(curves["t"], curves["err_rel_mean"], "o-", ms=3, label="relative L2 error")
-    plt.plot(curves["t"], curves["err_max"], "s-", ms=3, label="max absolute error")
-    plt.yscale("log")
+    fig, ax = plt.subplots(figsize=(9, 5))
+    ax.plot(curves["t"], curves["err_max"], "s-", ms=3, label="max absolute error")
+    ax.set_yscale("log")
     if t_div is not None:
-        # Single divergence-time marker for both curves at once, rather than
-        # a separate threshold recomputed from the noisy relative curve --
-        # see compute_t_div in metrics.py for why it's err_max-based.
-        plt.axvline(t_div, color="red", linestyle="--", label=f"t_div = {t_div:.2f}")
-    plt.xlabel("t"); plt.ylabel("error"); plt.grid(True, which="both"); plt.legend()
-    plt.title("Rollout error over time")
+        # See compute_t_div in metrics.py for why the threshold is err_max-based.
+        ax.axvline(t_div, color="red", linestyle="--", label=f"t_div = {t_div:.2f}")
+    ax.set_xlabel("time (s)", fontsize=17)
+    ax.set_ylabel("error", fontsize=17)
+    ax.tick_params(axis="both", labelsize=17)
+    ax.grid(True, which="both")
+    ax.legend(fontsize=17)
+    plt.tight_layout()
     plt.savefig(output_dir / _tagged("error_vs_time.png", cfg), dpi=150, bbox_inches="tight")
     plt.close()
 
@@ -185,11 +186,10 @@ def plot_one_step_predictions(y_true: np.ndarray, y_pred: np.ndarray, OUTPUTS: l
         ax.scatter(y_r, y_p, alpha=0.4, s=8)
         lim = max(abs(y_r).max(), abs(y_p).max())
         ax.plot([-lim, lim], [-lim, lim], "r--", lw=1, label="perfect prediction")
-        ax.set_xlabel(f"{col} real (physical)"); ax.set_ylabel(f"{col} predicted (physical)")
-        m = one_step_metrics[col]
-        ax.set_title(f"{col}\nMSE (norm)={m['mse_norm']:.2e}  |  R²={m['r2']:.3f}")
-        ax.legend(); ax.grid(True)
-    fig.suptitle("One-step prediction over the test split", fontsize=14)
+        ax.set_xlabel(f"{col} real (physical)", fontsize=17)
+        ax.set_ylabel(f"{col} predicted (physical)", fontsize=17)
+        ax.tick_params(axis="both", labelsize=12)
+        ax.legend(fontsize=16); ax.grid(True)
     plt.tight_layout()
     plt.savefig(output_dir / _tagged(filename, cfg), dpi=150, bbox_inches="tight")
     plt.close()

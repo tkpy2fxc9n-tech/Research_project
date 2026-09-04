@@ -1,0 +1,13 @@
+Strategy     P_thr_5%       T_max_5%      T_max_10%     T_mean_5%    T_mean_10%    E_short      E_max
+----------   --------   ------------   ------------   -----------   -----------   --------   --------
+PINN=0          44.5%   2.31s (100%)    3.48s (95%)   4.29s (49%)   4.47s (23%)   3.93e-06   5.30e-04
+PINN=0.001      61.0%   1.65s (100%)   2.88s (100%)   3.51s (87%)   4.38s (39%)   7.48e-06   8.44e-04
+PINN=0.01       43.9%    2.55s (99%)    3.06s (81%)   3.90s (47%)   3.84s (25%)   3.25e-06   5.04e-04
+PINN=0.1        39.6%    2.25s (96%)    3.29s (69%)   3.60s (33%)   3.87s (16%)   4.32e-06   4.08e-04
+
+E_short  : mean RMSE over the first 50 rollout steps (short-horizon error). Lower is better.
+P_thr_5%: % of rollout timesteps where error exceeds 5% of reference amplitude -- a BADNESS fraction. Lower is better.
+E_max    : peak max absolute error over the rollout. Lower is better.
+T_max_*  : first time the WORST-NODE error crosses the 5%/10% threshold. Higher is better (capped at the rollout horizon).
+T_mean_* : first time the BEAM-MEAN error crosses the 5%/10% threshold. Higher is better (capped at the rollout horizon).
+(median across trajectories; T_* columns show median (%reached) among trajectories that crossed the threshold; N=99 held-out test trajectories)

@@ -1,0 +1,60 @@
+=== beamsurrogate [run] run_id=p4_cnn model=cnn regime=pushforward stabilizer=none dataset=simple features=['U'] ===
+[mem] start: 0.58 Go
+Loaded 2000 trajectories from /home/aph25/Code_GH/data/beam_dataset_simple.h5
+Split distribution (from dataset):
+  train : 1817 simulations (90.8 %)
+  val   :   84 simulations (4.2 %)
+  test  :   99 simulations (5.0 %)
+[mem] after load_hdf5_dataset: 20.61 Go
+[mem] after compute_norm_stats: 20.61 Go
+ConvNet(
+  (conv): Sequential(
+    (0): Conv1d(2, 16, kernel_size=(5,), stride=(1,), padding=(2,))
+    (1): ReLU()
+    (2): Conv1d(16, 32, kernel_size=(5,), stride=(1,), padding=(2,))
+    (3): ReLU()
+  )
+  (head): Sequential(
+    (0): Linear(in_features=736, out_features=32, bias=True)
+    (1): ReLU()
+    (2): Linear(in_features=32, out_features=3, bias=True)
+  )
+)
+Parameters: 26,451
+[mem] after make_dataloaders: 38.33 Go
+[mem] after trimming df to test split: 19.81 Go
+Epoch    1/100  --  data: 0.0373  |  pushforward: 0.9826  |  physics: 0.1074  |  L2 rel error (val): 1.3969
+Epoch    2/100  --  data: 0.0067  |  pushforward: 0.1331  |  physics: 0.0142  |  L2 rel error (val): 0.8694
+Epoch    3/100  --  data: 0.0056  |  pushforward: 0.1173  |  physics: 0.0096  |  L2 rel error (val): 0.8535
+Epoch    4/100  --  data: 0.0058  |  pushforward: 0.1140  |  physics: 0.0092  |  L2 rel error (val): 0.8934
+Epoch    5/100  --  data: 0.0057  |  pushforward: 0.1092  |  physics: 0.0089  |  L2 rel error (val): 0.8517
+Epoch    6/100  --  data: 0.0049  |  pushforward: 0.0903  |  physics: 0.0082  |  L2 rel error (val): 0.8412
+Epoch    7/100  --  data: 0.0045  |  pushforward: 0.0833  |  physics: 0.0081  |  L2 rel error (val): 0.8528
+Epoch    8/100  --  data: 0.0042  |  pushforward: 0.0757  |  physics: 0.0079  |  L2 rel error (val): 0.8444
+Epoch    9/100  --  data: 0.0038  |  pushforward: 0.0705  |  physics: 0.0076  |  L2 rel error (val): 0.8392
+Epoch   10/100  --  data: 0.0036  |  pushforward: 0.0654  |  physics: 0.0074  |  L2 rel error (val): 0.8551
+Epoch   11/100  --  data: 0.0036  |  pushforward: 0.0640  |  physics: 0.0073  |  L2 rel error (val): 0.8361
+Epoch   12/100  --  data: 0.0033  |  pushforward: 0.0604  |  physics: 0.0074  |  L2 rel error (val): 0.8409
+Epoch   13/100  --  data: 0.0032  |  pushforward: 0.0553  |  physics: 0.0071  |  L2 rel error (val): 0.8276
+Epoch   14/100  --  data: 0.0031  |  pushforward: 0.0543  |  physics: 0.0071  |  L2 rel error (val): 0.8473
+Epoch   15/100  --  data: 0.0030  |  pushforward: 0.0538  |  physics: 0.0070  |  L2 rel error (val): 0.8509
+Epoch   16/100  --  data: 0.0029  |  pushforward: 0.0511  |  physics: 0.0069  |  L2 rel error (val): 0.8353
+Epoch   17/100  --  data: 0.0028  |  pushforward: 0.0494  |  physics: 0.0068  |  L2 rel error (val): 0.8376
+Epoch   18/100  --  data: 0.0028  |  pushforward: 0.0483  |  physics: 0.0067  |  L2 rel error (val): 0.8479
+Epoch   19/100  --  data: 0.0028  |  pushforward: 0.0501  |  physics: 0.0067  |  L2 rel error (val): 0.8345
+Epoch   20/100  --  data: 0.0026  |  pushforward: 0.0451  |  physics: 0.0066  |  L2 rel error (val): 0.8492
+Epoch   21/100  --  data: 0.0026  |  pushforward: 0.0447  |  physics: 0.0064  |  L2 rel error (val): 0.8471
+Epoch   22/100  --  data: 0.0026  |  pushforward: 0.0440  |  physics: 0.0064  |  L2 rel error (val): 0.8711
+Epoch   23/100  --  data: 0.0027  |  pushforward: 0.0454  |  physics: 0.0066  |  L2 rel error (val): 0.8459
+Epoch   24/100  --  data: 0.0026  |  pushforward: 0.0452  |  physics: 0.0065  |  L2 rel error (val): 0.8299
+Epoch   25/100  --  data: 0.0025  |  pushforward: 0.0448  |  physics: 0.0065  |  L2 rel error (val): 0.8434
+Epoch   26/100  --  data: 0.0025  |  pushforward: 0.0424  |  physics: 0.0064  |  L2 rel error (val): 0.8358
+Epoch   27/100  --  data: 0.0025  |  pushforward: 0.0426  |  physics: 0.0064  |  L2 rel error (val): 0.9139
+Epoch   28/100  --  data: 0.0025  |  pushforward: 0.0426  |  physics: 0.0066  |  L2 rel error (val): 0.9063
+Early stopping at epoch 28: val loss hasn't improved for 15 epochs (best=0.827554).
+Best model reloaded -- minimum L2 rel error (val): 0.827554
+[mem] after training: 20.06 Go
+[mem] after evaluate_one_step: 20.17 Go
+[mem] after rollout + benchmark: 20.17 Go
+Done -- outputs in /home/aph25/Code_GH/runs/p4_cnn
+RUN DONE: configs/runs/p4_cnn.yaml

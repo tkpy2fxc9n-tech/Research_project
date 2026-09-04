@@ -1,0 +1,70 @@
+{
+  "n_trajectories": 99,
+  "E_short": {
+    "mean": 1.682058808436249e-05,
+    "std": 2.3789426025426243e-05,
+    "median": 7.5292449038656675e-06,
+    "n": 99
+  },
+  "E_max": {
+    "mean": 0.0005713647001105441,
+    "std": 0.0004800739963428458,
+    "median": 0.0005026039399974228,
+    "n": 99
+  },
+  "t_E_max": {
+    "mean": 4.143939393939394,
+    "std": 0.7435620224133225,
+    "median": 4.29,
+    "n": 99
+  },
+  "P_thr_5pct": {
+    "mean": 49.879159695110616,
+    "std": 25.122363553377866,
+    "median": 44.785276073619634,
+    "n": 99
+  },
+  "amp_loss_pct": {
+    "mean": -4.110284794488896,
+    "std": 10.789162606625952,
+    "median": -1.2343947142273544,
+    "n": 99
+  },
+  "energy_drift_pct": {
+    "mean": 518047986.31849295,
+    "std": 1199227792.0365722,
+    "median": 7645251.79812506,
+    "n": 59
+  },
+  "error_corr_time": {
+    "mean": 0.22272727272727275,
+    "std": 0.11078980172059727,
+    "median": 0.21,
+    "n": 99
+  },
+  "t_div": {
+    "pct_reached": 90.9090909090909,
+    "median_reached": 3.585,
+    "n_reached": 90
+  },
+  "T_max_5pct": {
+    "pct_reached": 100.0,
+    "median_reached": 2.22,
+    "n_reached": 99
+  },
+  "T_max_10pct": {
+    "pct_reached": 90.9090909090909,
+    "median_reached": 3.585,
+    "n_reached": 90
+  },
+  "T_mean_5pct": {
+    "pct_reached": 27.272727272727273,
+    "median_reached": 4.41,
+    "n_reached": 27
+  },
+  "T_mean_10pct": {
+    "pct_reached": 0.0,
+    "median_reached": null,
+    "n_reached": 0
+  }
+}

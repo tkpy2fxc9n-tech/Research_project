@@ -1,0 +1,39 @@
+LaTeX export for p7_dataset_medium_pinn_0.01
+Figures at: /home/aph25/Code_GH/runs/p7/models/p7_dataset_medium_pinn_0.01/figures/snapshots (panels) and /home/aph25/Code_GH/runs/p7/models/p7_dataset_medium_pinn_0.01/figures/threshold_violation_map.png
+
+=== Table~\ref{tab:assembly_metrics} -- Baseline row ===
+  T_5%^max  (first crossing of 5% FD peak)  : 1.59s
+  T_10%^max (first crossing of 10% FD peak) : 2.52s
+  E_max (abs max |FD-NN| over all points/times) : 0.003922
+  Delta E_max (baseline)                        : 1.00
+  t_{E_max} (time of max error)                : 9.99s
+  P_thr (%% of rollout time with worst-node error > 5% of FD peak) : 80.9%
+
+=== Figure~\ref{fig:threshold_violation_map} prose ===
+  Violations occur at 100.0% of the 34 non-fixed lattice nodes (34 nodes) ever exceeding 5% of FD peak error.
+  Of those violating nodes, 100.0% lie within 1 hop(s) of a junction (degree >= 3), against 100.0% expected if violations were spatially uniform.
+  Worst single junction node: R2_4 (degree 6), peak |FD-NN| = 0.002785.
+
+  CAVEAT: 'ever exceeds threshold' accumulates over the whole 10s rollout, so on a long rollout it tends to saturate towards 100% of nodes (every node eventually crosses the threshold once) -- it does NOT mean the error is spatially uniform at any given instant. Compare the panel_err_t*.png images directly for the actual spatial pattern at each instant.
+
+  Top rods by peak |FD-NN| error (closest thing to 'junction between rods X and Y'):
+    R1_3-R1_4: peak |FD-NN| = 0.003922
+    R1_3-R2_4: peak |FD-NN| = 0.003444
+    R3_2-R4_3: peak |FD-NN| = 0.003174
+    R1_4-R2_4: peak |FD-NN| = 0.003163
+    R1_2-R1_3: peak |FD-NN| = 0.003106
+
+  Lattice-mean |FD-NN| error curve: t=2.58s -> 3.854e-05, t=5.04s -> 1.100e-04, t=7.50s -> 1.479e-04, t=9.99s -> 5.397e-04  ==> still growing (no plateau) through the full rollout.
+
+  NOTE ON IMPEDANCE RATIO: this lattice is a UNIFORM triangular mesh -- every rod shares the same L, CFL and material, so Z2/Z1 = 1 at every junction (no material mismatch to report). The variable that actually correlates with junction error here is NODE DEGREE (how many rods meet at a node), not impedance. Violation rate by degree:
+    degree 1: 100.0% of 2 node(s) violate
+    degree 2: 100.0% of 7 node(s) violate
+    degree 3: 100.0% of 2 node(s) violate
+    degree 5: 100.0% of 4 node(s) violate
+    degree 6: 100.0% of 19 node(s) violate
+
+=== Peak displacement / global error (for the t=2.5s..10.0s prose paragraph) ===
+  FD peak |u| : 0.006643   NN peak |u| : 0.005810   ratio : 0.875
+  relative mean error over whole rollout : 3.14%
+  relative max  error over whole rollout : 59.04%
+  NOTE: per-instant (t=2.5/5.0/7.5/10.0s) wavefront-agreement and error-map-uniformity values are NOT computed here -- they require reading the panel_*.png images directly (open figures/panel_err_t*.png and compare by eye, or tell me the specific instants and I can add per-frame peak/localisation stats to this script).

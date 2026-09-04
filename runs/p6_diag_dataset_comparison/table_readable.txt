@@ -1,0 +1,30 @@
+Rollout performance as a function of training dataset (p6_diag_dataset_comparison)
+All rollouts start from rest. Exc.: R = right end only, R+L = both ends (anti-phase).
+Each cell aggregates N=20 random parameter draws of that wave family (amplitude, frequency/pulse-width, ...), not a single fixed wave.
+
+Dataset mapping (per src/beamsurrogate/data/generate.py PROFILES -- corrects thesis draft Table 11, which listed wrong wave families for B/C):
+  A = Gaussian pulse only. Right end driven, left always at rest. Dirichlet (displacement) BC only.
+  B = 5 wave families, evenly weighted -- Gaussian pulse, sine pulse, triangular, sawtooth, square. Right end driven, left always at rest. Dirichlet (displacement) BC only.
+  C = same 5 families as B. Driving pattern now mixed: 50% both ends driven (independent family per end), 25% right only, 25% left only. Dirichlet (displacement) BC only.
+  D = 6 wave families -- Fourier sum (30%), sinusoid (15%), chirp (15%), Gaussian pulse (15%), tanh shock (10%), filtered random walk (15%). Driving pattern mixed: 65% both ends, 15% left only, 15% right only, 5% both at rest. BC type per end independently drawn from Displacement (Dirichlet), Force/slope (Neumann), or integrated Velocity (Dirichlet).
+
+-- R (right end only) --
+Test wave             Exc.         A T_5%                 A E_max         B T_5%                 B E_max         C T_5%                 C E_max         D T_5%                 D E_max
+-------------------   ----   ------------   ---------------------   ------------   ---------------------   ------------   ---------------------   ------------   ---------------------
+Gaussian                 R   2.55s (100%)   6.06e-04 +/- 5.92e-04   2.28s (100%)   7.23e-04 +/- 6.71e-04   1.33s (100%)   7.64e-04 +/- 4.46e-04   1.05s (100%)   1.21e-03 +/- 7.64e-04
+Chirp                    R   0.12s (100%)   2.03e+15 +/- 6.49e+15   0.12s (100%)   2.39e-03 +/- 1.48e-03   0.12s (100%)   1.52e-03 +/- 8.26e-04   0.12s (100%)   1.52e-03 +/- 1.01e-03
+Tanh shock               R   1.83s (100%)   1.36e+08 +/- 5.93e+08   2.96s (100%)   5.79e-04 +/- 2.99e-04   1.60s (100%)   5.29e-04 +/- 1.18e-04   1.65s (100%)   7.57e-04 +/- 3.16e-04
+Filtered rand. walk      R   0.68s (100%)   3.33e+07 +/- 1.45e+08   1.81s (100%)   1.10e-03 +/- 4.42e-04   1.06s (100%)   6.53e-04 +/- 2.12e-04   1.71s (100%)   9.79e-04 +/- 5.34e-04
+Sawtooth                 R   1.47s (100%)   3.77e-03 +/- 4.51e-03   1.98s (100%)   8.39e-04 +/- 4.20e-04   0.78s (100%)   7.42e-04 +/- 3.55e-04   1.19s (100%)   9.66e-04 +/- 7.32e-04
+Sinusoids                R   0.12s (100%)   4.49e+14 +/- 1.42e+15   0.12s (100%)   2.23e-03 +/- 1.30e-03   0.12s (100%)   1.38e-03 +/- 7.30e-04   0.12s (100%)   1.46e-03 +/- 9.04e-04
+
+-- R+L (both ends, anti-phase) --
+Gaussian               R+L   0.96s (100%)   9.87e+02 +/- 3.41e+03   0.96s (100%)   1.24e-03 +/- 7.79e-04   1.11s (100%)   8.45e-04 +/- 4.64e-04   1.02s (100%)   1.28e-03 +/- 7.37e-04
+Tanh shock             R+L   1.35s (100%)   2.14e+08 +/- 8.28e+08   1.20s (100%)   9.36e-04 +/- 5.57e-04   1.59s (100%)   5.84e-04 +/- 1.04e-04   1.38s (100%)   8.53e-04 +/- 3.24e-04
+Filtered rand. walk    R+L   0.58s (100%)   2.87e+06 +/- 1.25e+07   0.45s (100%)   8.15e-04 +/- 2.99e-04   0.84s (100%)   5.79e-04 +/- 9.61e-05   1.35s (100%)   4.76e-04 +/- 2.21e-04
+Sawtooth               R+L   0.79s (100%)   2.58e+07 +/- 9.63e+07   0.72s (100%)   1.21e-03 +/- 8.37e-04   0.75s (100%)   6.86e-04 +/- 3.60e-04   0.82s (100%)   8.97e-04 +/- 7.09e-04
+Sinusoids              R+L   0.12s (100%)   2.62e+14 +/- 7.70e+14   0.12s (100%)   2.57e-03 +/- 1.54e-03   0.12s (100%)   1.63e-03 +/- 8.38e-04   0.12s (100%)   1.47e-03 +/- 8.74e-04
+
+E_max    : peak max absolute error over the rollout. Lower is better.
+T_max_*  : first time the WORST-NODE error crosses the 5%/10% threshold. Higher is better (capped at the rollout horizon).
+(E_max: mean +/- std; T_max_5%: median (%reached) -- across N=20 draws per cell)

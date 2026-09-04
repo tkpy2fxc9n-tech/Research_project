@@ -1,0 +1,8 @@
+=== beamsurrogate [run] run_id=p3_pinn_0 model=mlp regime=pushforward stabilizer=none dataset=simple features=['U', 'Ut'] ===
+[mem] start: 0.58 Go
+Loaded 2000 trajectories from /home/aph25/Code_GH/data/beam_dataset_simple.h5
+Split distribution (from dataset):
+  train : 1817 simulations (90.8 %)
+  val   :   84 simulations (4.2 %)
+  test  :   99 simulations (5.0 %)
+[mem] after load_hdf5_dataset: 55.16 Go

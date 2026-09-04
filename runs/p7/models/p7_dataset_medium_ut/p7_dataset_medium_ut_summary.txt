@@ -1,0 +1,23 @@
+p17 rectangular assembly -- p7_dataset_medium_ut
+94-rod triangular lattice, gaussian pulse, 10.0s rollout
+
+PEAK DISPLACEMENT
+  FD peak |u|            : 0.006643
+  NN peak |u|            : 0.005230
+  ratio NN/FD            : 0.787
+
+FD vs NN DIFFERENCE (over every lattice point, all frames)
+  absolute max |FD-NN|   : 0.003037
+  absolute mean |FD-NN|  : 0.000220
+  relative max  (% of FD peak) : 45.72%
+  relative mean (% of FD peak) : 3.32%
+
+ROLLOUT-TIME METRICS (worst-lattice-node error vs simulation time)
+  t_div (first crossing of 10% of FD peak) : 2.46s
+  time of max error                        : 9.69s
+  proportion of rollout time above 5% of FD peak : 77.9%
+
+COMPUTATIONAL TIME -- measured on THIS lattice, not a single isolated rod
+  FD wall time           : 1.605 s (full 10.0s rollout, 94 rods)
+  NN wall time           : 14.234 s
+  NN / FD wall-time ratio: 8.87x (slower)

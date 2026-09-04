@@ -199,15 +199,17 @@ def plot_error_sweep(run_id: str, sources: dict, title: str, figure_filename: st
     figures_dir = run_dir / "figures"
     figures_dir.mkdir(parents=True, exist_ok=True)
 
-    fig, ax = plt.subplots(figsize=(9, 5))
+    fig, ax = plt.subplots(figsize=(9, 6.5))   # taller than the default 9x5: at this fontsize the
+                                                 # rotated ylabel needs the extra height or
+                                                 # bbox_inches="tight" clips its tail
     for (label, c), marker in zip(curves.items(), MARKERS):
         ax.plot(c["t"], c["err_max"], marker, ms=3, label=label)
     ax.set_yscale("log")
-    ax.set_xlabel("t")
-    ax.set_ylabel("max absolute error along the beam (log)")
+    ax.set_xlabel("time (s)", fontsize=17)
+    ax.set_ylabel("max absolute error along the beam (log)", fontsize=17)
+    ax.tick_params(axis="both", labelsize=17)
     ax.grid(True, which="both")
-    ax.legend()
-    ax.set_title(title)
+    ax.legend(fontsize=17)
     plt.tight_layout()
     plt.savefig(figures_dir / figure_filename, dpi=150, bbox_inches="tight")
     plt.close()

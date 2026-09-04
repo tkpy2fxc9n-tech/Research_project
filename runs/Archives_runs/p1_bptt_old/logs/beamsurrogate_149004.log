@@ -1,0 +1,81 @@
+=== beamsurrogate [run] run_id=p2_bptt_hops5_group4 model=mlp regime=bptt stabilizer=none dataset=simple features=['U'] ===
+[mem] start: 0.58 Go
+Loaded 2000 trajectories from /home/aph25/Code_GH/data/beam_dataset_simple.h5
+Split distribution (from dataset):
+  train : 1817 simulations (90.8 %)
+  val   :   84 simulations (4.2 %)
+  test  :   99 simulations (5.0 %)
+[mem] after load_hdf5_dataset: 20.61 Go
+[mem] after compute_norm_stats: 20.61 Go
+MLP(
+  (net): Sequential(
+    (0): Linear(in_features=46, out_features=512, bias=True)
+    (1): GELU(approximate='none')
+    (2): Linear(in_features=512, out_features=256, bias=True)
+    (3): GELU(approximate='none')
+    (4): Linear(in_features=256, out_features=64, bias=True)
+    (5): GELU(approximate='none')
+    (6): Linear(in_features=64, out_features=3, bias=True)
+  )
+)
+Parameters: 172,035
+[mem] after make_dataloaders: 38.33 Go
+[mem] after trimming df to test split: 19.81 Go
+Epoch    1/100 -- combined loss (train): 17.9926  |  L2 rel error (val): 1.1209 -- 166.3s
+Epoch    2/100 -- combined loss (train): 12.8888  |  L2 rel error (val): 0.9452 -- 161.7s
+Epoch    3/100 -- combined loss (train): 13.6511  |  L2 rel error (val): 0.9842 -- 160.2s
+Epoch    4/100 -- combined loss (train): 10.9480  |  L2 rel error (val): 1.0385 -- 159.7s
+Epoch    5/100 -- combined loss (train): 9.5678  |  L2 rel error (val): 1.1478 -- 163.0s
+Epoch    6/100 -- combined loss (train): 8.3076  |  L2 rel error (val): 1.0920 -- 160.6s
+Epoch    7/100 -- combined loss (train): 7.4534  |  L2 rel error (val): 0.9730 -- 160.8s
+Epoch    8/100 -- combined loss (train): 6.8155  |  L2 rel error (val): 0.9406 -- 160.8s
+Epoch    9/100 -- combined loss (train): 6.2305  |  L2 rel error (val): 0.9382 -- 163.4s
+Epoch   10/100 -- combined loss (train): 6.7603  |  L2 rel error (val): 0.9209 -- 161.0s
+Epoch   11/100 -- combined loss (train): 5.9187  |  L2 rel error (val): 0.9578 -- 160.5s
+Epoch   12/100 -- combined loss (train): 5.7718  |  L2 rel error (val): 0.9730 -- 160.3s
+Epoch   13/100 -- combined loss (train): 5.4951  |  L2 rel error (val): 0.8985 -- 162.7s
+Epoch   14/100 -- combined loss (train): 5.8088  |  L2 rel error (val): 1.2261 -- 160.5s
+Epoch   15/100 -- combined loss (train): 11.1723  |  L2 rel error (val): 1.0411 -- 160.9s
+Epoch   16/100 -- combined loss (train): 4.8594  |  L2 rel error (val): 0.9727 -- 160.1s
+Epoch   17/100 -- combined loss (train): 4.4630  |  L2 rel error (val): 1.0032 -- 160.5s
+Epoch   18/100 -- combined loss (train): 5.2854  |  L2 rel error (val): 0.9256 -- 163.7s
+Epoch   19/100 -- combined loss (train): 4.7753  |  L2 rel error (val): 0.9028 -- 160.9s
+Epoch   20/100 -- combined loss (train): 369.0352  |  L2 rel error (val): 0.9814 -- 160.9s
+Epoch   21/100 -- combined loss (train): 7.1956  |  L2 rel error (val): 1.0455 -- 161.6s
+Epoch   22/100 -- combined loss (train): 4.2978  |  L2 rel error (val): 0.9250 -- 163.4s
+Epoch   23/100 -- combined loss (train): 5.5698  |  L2 rel error (val): 1.0614 -- 161.1s
+Epoch   24/100 -- combined loss (train): 4.7107  |  L2 rel error (val): 0.9608 -- 161.4s
+Epoch   25/100 -- combined loss (train): 5.7578  |  L2 rel error (val): 0.9479 -- 161.9s
+Epoch   26/100 -- combined loss (train): 4.7117  |  L2 rel error (val): 0.9246 -- 163.1s
+Epoch   27/100 -- combined loss (train): 4.2354  |  L2 rel error (val): 0.9714 -- 160.0s
+Epoch   28/100 -- combined loss (train): 4.0359  |  L2 rel error (val): 0.8670 -- 160.6s
+Epoch   29/100 -- combined loss (train): 3.8358  |  L2 rel error (val): 0.9047 -- 160.4s
+Epoch   30/100 -- combined loss (train): 4.1499  |  L2 rel error (val): 1.0211 -- 160.3s
+Epoch   31/100 -- combined loss (train): 4.0002  |  L2 rel error (val): 0.9090 -- 163.8s
+Epoch   32/100 -- combined loss (train): 3.7938  |  L2 rel error (val): 0.8692 -- 161.2s
+Epoch   33/100 -- combined loss (train): 3.7404  |  L2 rel error (val): 0.9147 -- 161.7s
+Epoch   34/100 -- combined loss (train): 3.4804  |  L2 rel error (val): 0.9350 -- 161.7s
+Epoch   35/100 -- combined loss (train): 3.7429  |  L2 rel error (val): 0.9326 -- 163.5s
+Epoch   36/100 -- combined loss (train): 3.6463  |  L2 rel error (val): 0.8667 -- 161.5s
+Epoch   37/100 -- combined loss (train): 3.5522  |  L2 rel error (val): 0.8706 -- 160.0s
+Epoch   38/100 -- combined loss (train): 3.4326  |  L2 rel error (val): 0.9281 -- 160.5s
+Epoch   39/100 -- combined loss (train): 3.4201  |  L2 rel error (val): 0.8837 -- 163.5s
+Epoch   40/100 -- combined loss (train): 3.3219  |  L2 rel error (val): 0.9753 -- 160.6s
+Epoch   41/100 -- combined loss (train): 3.2519  |  L2 rel error (val): 1.0152 -- 160.9s
+Epoch   42/100 -- combined loss (train): 3.6013  |  L2 rel error (val): 1.0087 -- 159.8s
+Epoch   43/100 -- combined loss (train): nan  |  L2 rel error (val): nan -- 160.8s
+Epoch   44/100 -- combined loss (train): nan  |  L2 rel error (val): nan -- 162.0s
+Epoch   45/100 -- combined loss (train): nan  |  L2 rel error (val): nan -- 160.5s
+Epoch   46/100 -- combined loss (train): nan  |  L2 rel error (val): nan -- 161.6s
+Epoch   47/100 -- combined loss (train): nan  |  L2 rel error (val): nan -- 160.2s
+Epoch   48/100 -- combined loss (train): nan  |  L2 rel error (val): nan -- 163.7s
+Epoch   49/100 -- combined loss (train): nan  |  L2 rel error (val): nan -- 161.2s
+Epoch   50/100 -- combined loss (train): nan  |  L2 rel error (val): nan -- 161.8s
+Epoch   51/100 -- combined loss (train): nan  |  L2 rel error (val): nan -- 161.9s
+Early stopping at epoch 51: val loss hasn't improved for 15 epochs (best=0.866699).
+Best model reloaded -- minimum L2 rel error (val): 0.866699
+[mem] after training: 20.13 Go
+[mem] after evaluate_one_step: 20.25 Go
+[mem] after rollout + benchmark: 20.25 Go
+Done -- outputs in /home/aph25/Code_GH/runs/p2_bptt_hops5_group4
+RUN DONE: configs/runs/p2_bptt_hops5_group4.yaml

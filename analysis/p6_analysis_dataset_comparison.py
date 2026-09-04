@@ -264,7 +264,8 @@ def main():
 
     csv_headers = ["wave", "excitation"]
     for letter in letters:
-        csv_headers += [f"{letter}_T_max_5pct_median", f"{letter}_T_max_5pct_pct_reached",
+        csv_headers += [f"{letter}_T_max_5pct_median", f"{letter}_T_max_5pct_std",
+                         f"{letter}_T_max_5pct_pct_reached",
                          f"{letter}_E_max_mean", f"{letter}_E_max_std"]
     csv_rows = []
     for family, excitation in ordered_rows:
@@ -273,9 +274,10 @@ def main():
         for letter in letters:
             s = row_metrics.get(letter)
             if s is None:
-                row += [None, None, None, None]
+                row += [None, None, None, None, None]
             else:
-                row += [s["T_max_5pct"]["median_reached"], s["T_max_5pct"]["pct_reached"],
+                row += [s["T_max_5pct"]["median_reached"], s["T_max_5pct"]["std_reached"],
+                        s["T_max_5pct"]["pct_reached"],
                         s["E_max"]["mean"], s["E_max"]["std"]]
         csv_rows.append(row)
     with open(comp_dir / "table.csv", "w", newline="") as f:

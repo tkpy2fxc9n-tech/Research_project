@@ -1,0 +1,6 @@
+p1_diag_error_features (phase 1, H4) -- max rollout error vs input features
+
+features={U} (source: p1_feat_u): final err_max=3.8150e-04  peak err_max=3.8150e-04
+features={U,Ut} (source: p1_feat_u_ut): final err_max=2.3251e-04  peak err_max=2.8984e-04
+features={Ut,Uxx} (source: p1_feat_ut_uxx): final err_max=7.5902e-04  peak err_max=7.5902e-04
+features={U,Ut,Uxx} (source: p1_feat_all): final err_max=3.2584e-04  peak err_max=3.4887e-04

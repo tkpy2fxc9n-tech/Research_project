@@ -1,0 +1,48 @@
+WARNING: N_FWD*ndt=15 > SS=11 -- a rollout hop can reach past the stencil built at hop start (receptive-field constraint violated).
+WARNING: N_FWD*ndt=15 > SS=11 -- a rollout hop can reach past the stencil built at hop start (receptive-field constraint violated).
+=== beamsurrogate [run] run_id=p2_ndt5 model=mlp regime=pushforward stabilizer=none dataset=simple features=['U'] ===
+[mem] start: 0.57 Go
+Loaded 2000 trajectories from /home/aph25/Code_GH/data/beam_dataset_simple.h5
+Split distribution (from dataset):
+  train : 1817 simulations (90.8 %)
+  val   :   84 simulations (4.2 %)
+  test  :   99 simulations (5.0 %)
+[mem] after load_hdf5_dataset: 20.21 Go
+[mem] after compute_norm_stats: 20.21 Go
+MLP(
+  (net): Sequential(
+    (0): Linear(in_features=46, out_features=512, bias=True)
+    (1): GELU(approximate='none')
+    (2): Linear(in_features=512, out_features=256, bias=True)
+    (3): GELU(approximate='none')
+    (4): Linear(in_features=256, out_features=64, bias=True)
+    (5): GELU(approximate='none')
+    (6): Linear(in_features=64, out_features=3, bias=True)
+  )
+)
+Parameters: 172,035
+[mem] after make_dataloaders: 37.56 Go
+[mem] after trimming df to test split: 19.41 Go
+Epoch    1/100  --  data: 0.0154  |  pushforward: 0.3022  |  physics: 0.0000  |  comparable loss (val): 0.0155
+Epoch    2/100  --  data: 0.0105  |  pushforward: 0.1675  |  physics: 0.0000  |  comparable loss (val): 0.0873
+Epoch    3/100  --  data: 0.0104  |  pushforward: 0.1487  |  physics: 0.0000  |  comparable loss (val): 0.0942
+Epoch    4/100  --  data: 0.0102  |  pushforward: 0.1305  |  physics: 0.0000  |  comparable loss (val): 0.3624
+Epoch    5/100  --  data: 0.0106  |  pushforward: 0.1290  |  physics: 0.0000  |  comparable loss (val): 0.1093
+Epoch    6/100  --  data: 0.0096  |  pushforward: 0.1119  |  physics: 0.0000  |  comparable loss (val): 0.0254
+Epoch    7/100  --  data: 0.0082  |  pushforward: 0.0939  |  physics: 0.0000  |  comparable loss (val): 0.1669
+Epoch    8/100  --  data: 0.0080  |  pushforward: 0.0907  |  physics: 0.0000  |  comparable loss (val): 0.2702
+Epoch    9/100  --  data: 0.0076  |  pushforward: 0.0874  |  physics: 0.0000  |  comparable loss (val): 0.3966
+Epoch   10/100  --  data: 0.0071  |  pushforward: 0.0801  |  physics: 0.0000  |  comparable loss (val): 0.0410
+Epoch   11/100  --  data: 0.0067  |  pushforward: 0.0745  |  physics: 0.0000  |  comparable loss (val): 0.1144
+Epoch   12/100  --  data: 0.0064  |  pushforward: 0.0708  |  physics: 0.0000  |  comparable loss (val): 0.0742
+Epoch   13/100  --  data: 0.0064  |  pushforward: 0.0711  |  physics: 0.0000  |  comparable loss (val): 0.0374
+Epoch   14/100  --  data: 0.0059  |  pushforward: 0.0646  |  physics: 0.0000  |  comparable loss (val): 0.0577
+Epoch   15/100  --  data: 0.0058  |  pushforward: 0.0650  |  physics: 0.0000  |  comparable loss (val): 0.0343
+Epoch   16/100  --  data: 0.0056  |  pushforward: 0.0618  |  physics: 0.0000  |  comparable loss (val): 0.0534
+Early stopping at epoch 16: val loss hasn't improved for 15 epochs (best=0.015509).
+Best model reloaded -- minimum comparable loss (val): 0.015509
+[mem] after training: 19.71 Go
+[mem] after evaluate_one_step: 19.83 Go
+[mem] after rollout + benchmark: 19.83 Go
+Done -- outputs in runs/p2/p2_ndt5
+RUN DONE: runs/p2/p2_ndt5/config.yaml

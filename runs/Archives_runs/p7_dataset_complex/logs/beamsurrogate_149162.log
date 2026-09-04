@@ -1,0 +1,2 @@
+=== beamsurrogate [run] run_id=p7_complex_nopinn model=mlp regime=pushforward stabilizer=none dataset=complex features=['U'] ===
+[mem] start: 0.58 Go

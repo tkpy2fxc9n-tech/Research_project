@@ -1,0 +1,6 @@
+p2_diag_error_ndt -- max rollout error over time vs ndt
+
+ndt=2 (source: p2_ndt2): final err_max=6.4217e-04  peak err_max=8.3131e-04
+ndt=3 (reference) (source: p2_reference): final err_max=1.4864e-04  peak err_max=3.7265e-04
+ndt=4 (source: p2_ndt4): final err_max=9.7142e-04  peak err_max=9.7142e-04
+ndt=5 (source: p2_ndt5): final err_max=3.2704e-03  peak err_max=4.3384e-03

@@ -7,46 +7,108 @@ campaign: **a run is a YAML file, never a copy of code.**
 ## Quickstart
 
 ```bash
-# 1. Install the package (editable, so edits to src/ take effect immediately)
+# 1. Create the environment and install the package (editable, so edits to
+#    src/ take effect immediately). requirements.txt pins the exact versions
+#    that produced everything in runs/ -- see "Environment" below.
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
 pip install -e .
 
-# 2. Generate the two canonical datasets (you run this yourself -- it can
+# 2. Generate the four report-level datasets (you run this yourself -- it can
 #    take a while at full scale; start with a small --n-trajectories to try
 #    the pipeline first).
-python dataset/make_dataset.py --profile simple  --n-trajectories 2000
-python dataset/make_dataset.py --profile complex --n-trajectories 2000
+#    The --output name matters: registry.py looks up beam_dataset_A/B/C/D.h5,
+#    while the generation profiles kept their older names.
+python dataset/make_dataset.py --profile simple       --n-trajectories 2000 --output data/beam_dataset_A.h5
+python dataset/make_dataset.py --profile medium       --n-trajectories 2000 --output data/beam_dataset_B.h5
+python dataset/make_dataset.py --profile medium_bidir --n-trajectories 2000 --output data/beam_dataset_C.h5
+python dataset/make_dataset.py --profile complex      --n-trajectories 2000 --output data/beam_dataset_D.h5
 
 # 3. Sanity-check the physics before training anything
 python checks/check_equivalence.py
 
 # 4. Run one experiment
-python -m beamsurrogate --config configs/runs/p0_baseline.yaml
+python -m beamsurrogate --config runs/p0/p0_baseline/config.yaml
 
 # 5. Smoke test (few trajectories, few epochs -- checks the pipeline runs
 #    end to end and writes a filled-in metrics.json; needs at least a small
 #    dataset from step 2, e.g. --n-trajectories 20)
-python -m beamsurrogate --config configs/runs/p0_baseline.yaml --smoke-test
+python -m beamsurrogate --config runs/p0/p0_baseline/config.yaml --smoke-test
 ```
+
+## Environment
+
+Everything under `runs/` was produced with this exact environment:
+
+| | version |
+|---|---|
+| Python | 3.13.5 |
+| torch | 2.13.0 (CUDA 13.0 build, `+cu130`) |
+| numpy | 2.5.1 |
+| pandas | 3.0.3 |
+| h5py | 3.16.0 |
+| matplotlib | 3.11.0 |
+| PyYAML | 6.0.3 |
+
+Those six are the **only** runtime dependencies -- no scipy, no
+scikit-learn, no tqdm, despite what may be installed system-wide on the
+original machine. `pyproject.toml` declares them unpinned so
+`pip install -e .` always resolves; `requirements.txt` pins the versions in
+the table.
+
+**No GPU is required.** `pip install -r requirements.txt` gives the CPU
+wheel on macOS (Apple Silicon additionally has the MPS backend) and the
+default CUDA wheel on Linux. The whole pipeline runs on CPU -- a GPU only
+makes training faster.
+
+## What is and isn't in this repository
+
+Source, configs, and the *small* outputs that let you read the results
+without re-running anything are versioned. The heavy, fully regenerable
+artifacts are not:
+
+| | in git | how to get it back |
+|---|---|---|
+| source, configs, `requirements.txt` | yes | -- |
+| `runs/**/figures/*.png` (879 files, 93 MB) | yes | -- |
+| `runs/**/metrics.json`, `*.csv`, `*.txt`, `*.yaml`, `*.log` | yes | -- |
+| `runs/**/model.pth` (94 checkpoints, 50 MB) | yes | -- |
+| `runs/**/*.npz` raw prediction arrays (5.3 GB) | no | re-run the run, or `analysis/*.py` |
+| `runs/**/*.gif` animations (400 MB) | no | `python analysis/p7_error_gif.py` |
+| `data/*.h5` datasets (2.1 GB) | no | `dataset/make_dataset.py`, see below |
+
+Because the checkpoints and `metrics.json` files are versioned, every
+`analysis/*.py` script runs **straight after cloning**, with no training and
+no dataset -- they only read `runs/*/metrics.json`. You need the datasets
+only to train a model from scratch.
 
 ## How a run works
 
-Every run is one **self-contained** file under `configs/runs/` -- every
-field spelled out explicitly, nothing implicit or inherited from elsewhere.
-Open any one file and you see everything that run does, e.g. the top of
-`configs/runs/p2_mback3.yaml`:
+Every run is one **self-contained** `config.yaml`, living in that run's own
+folder -- `runs/<phase>/<run_id>/config.yaml` -- with every field spelled out
+explicitly, nothing implicit or inherited from elsewhere. Open any one file
+and you see everything that run does, e.g. the top of
+`runs/p2/p2_mback3/config.yaml`:
 
 ```yaml
-run_id: p2_mback3
 M_BACK: 3
 ...   # every other field the run uses, spelled out below
 ```
+
+**A run's identity is its folder name and nothing else.** `run_id` is never
+written inside the file -- `load_config()` rejects it outright rather than
+silently overriding it, so the name can't drift out of sync with the folder.
+There is no separate `configs/` tree: the config lives next to the outputs
+it produced.
 
 No `phase` field: which phase a run belongs to is encoded only in its
 `run_id`/folder name (the `pN_` prefix) -- never duplicated as a separate
 value that could drift out of sync with the name.
 
-See [`GUIDE.md`](GUIDE.md) for a full walkthrough of how a config turns into
-a trained model, step by step, in plain language.
+`src/beamsurrogate/cli.py` is the entry point: it loads the config, builds
+the model / regime / stabilizer from `registry.py`, trains, evaluates, and
+writes the run folder described below -- read it top to bottom for the full
+path from a YAML file to a trained model.
 
 `src/beamsurrogate/config.py`'s `load_config()` just reads the YAML and
 applies any `--set KEY=VALUE` CLI overrides on top -- no merging, no
@@ -59,21 +121,24 @@ is what replaces copying a whole project directory per experiment variant:
 | `model` | `mlp`, `cnn` | `registry.MODELS` |
 | `regime` | `teacher_forcing`, `pushforward`, `bptt` | `registry.REGIMES` |
 | `stabilizer` | `none`, `noise`, `laplacian` | `registry.STABILIZERS` |
-| `dataset` | `simple`, `complex` | `registry.DATASETS` (which HDF5 file under `data/`) |
+| `dataset` | `A`, `B`, `C`, `D`, `simple_coarse_r2`, `simple_coarse_r4`, `simple_nondim` | `registry.DATASETS` (which HDF5 file under `data/`) |
 
-**Adding a new run costs a new YAML file -- copy an existing one close to
-what you want, give it a new `run_id`, and change the fields that differ.
+**Adding a new run costs a new folder with a `config.yaml` in it -- copy an
+existing run's config, put it in a new `runs/<phase>/<new_run_id>/` folder
+(the folder name becomes the run id), and change the fields that differ.
 Never a copy of `src/`.**
 
-There is no `configs/base.yaml` or `configs/retained/` -- every value a run
-uses lives in that run's own YAML, nowhere else.
+There is no `configs/base.yaml`, no `configs/retained/`, and no `configs/`
+directory at all -- every value a run uses lives in that run's own
+`config.yaml`, nowhere else.
 
 ## Run folder contract
 
-Every run writes `runs/<run_id>/`:
+Every run writes `runs/<phase>/<run_id>/`:
 
 ```
-runs/<run_id>/
+runs/<phase>/<run_id>/
+├── config.yaml            # the run's own self-contained config (versioned; this IS the run definition)
 ├── config.resolved.yaml   # the config AFTER applying --set overrides (every value; the run's own YAML is already self-contained)
 ├── env.json               # git sha (+dirty), dataset sha256, hostname, SLURM_JOB_ID, python/torch versions
 ├── metrics.json           # fixed schema -- see below
@@ -103,26 +168,38 @@ without special-casing which run produced it. Built by
  "spectrum": {"k": [], "power_pred": [], "power_ref": []}}
 ```
 
-## The two datasets
+## The datasets
 
-Both share the same HDF5 schema (see `src/beamsurrogate/data/split.py`'s
+All share the same HDF5 schema (see `src/beamsurrogate/data/split.py`'s
 `load_hdf5_dataset` for the reader, `src/beamsurrogate/data/generate.py`
 for the writer) so the rest of the pipeline never needs to know which one
-it's reading:
+it's reading. The four report-level datasets are keyed A-D in
+`registry.py`, in increasing order of difficulty:
 
-- **`data/beam_dataset_complex.h5`** -- 3 boundary-condition types, 6 driving
-  wave families, 6 initial-state types, both ends independently driven.
-- **`data/beam_dataset_simple.h5`** -- left end always at rest, right end
-  always a Gaussian pulse (amplitude and width each drawn from an
-  interval), Dirichlet only.
+| key | file | generation profile | content |
+|---|---|---|---|
+| **A** | `beam_dataset_A.h5` | `simple` | Gaussian pulse only, right-driven, Dirichlet only, never pre-excited |
+| **B** | `beam_dataset_B.h5` | `medium` | same topology as A, but 5 waveform families instead of gaussian only |
+| **C** | `beam_dataset_C.h5` | `medium_bidir` | same as B, except driving is two-sided: half the trajectories drive both ends |
+| **D** | `beam_dataset_D.h5` | `complex` | richest: 3 BC types, 6 wave families, 6 initial-state types, both ends independent |
+
+Three derived variants keep their original names because they are not
+report-level datasets:
+
+- **`beam_dataset_simple_coarse_r2.h5`** / **`_r4.h5`** -- A subsampled 2x /
+  4x in space and time (`dataset/make_coarse_dataset.py`). Not fresh
+  solver runs at coarse resolution.
+- **`beam_dataset_simple_nondim.h5`** -- A regenerated with `E = rho = L = 1`
+  and per-sample amplitude normalization (`dataset/make_dataset_nondim.py`).
 
 **No run ever regenerates data on the fly.** Generate both with
 `dataset/make_dataset.py` (see Quickstart) *before* launching any run --
 this also writes a `.sha256` sidecar next to the `.h5` file, which every
 run's `env.json` records.
 
-`data/`, `runs/`, and `figures/` are gitignored -- they're machine-local
-outputs, not source.
+`data/` is gitignored entirely -- the `.h5` files are machine-local outputs,
+not source, and are regenerated by the commands above. `runs/` is only
+partly gitignored: see "What is and isn't in this repository" above.
 
 ## Repository layout
 
@@ -133,8 +210,6 @@ src/beamsurrogate/    the package: physics/ (solver, waveforms, rod-network
                        (teacher_forcing, pushforward, bptt, stabilizers,
                        shared losses) · evaluate/ (rollout, metrics, plots)
                        · config.py · registry.py · cli.py
-configs/               runs/<run_id>.yaml (52 total, self-contained -- no
-                       base.yaml, no retained/, nothing else)
 analysis/              one script per phase-level comparison (p0_*.py ...
                        p9_*.py), reads runs/*/metrics.json, writes
                        figures/ -- a second, local pass over
@@ -147,18 +222,19 @@ checks/                check_equivalence.py, check_nondim_scaling.py --
 scripts/               run.job (Slurm launcher) + eval_*/cost_*_benchmark.py
                        (one-off evaluations and benchmarks, not part of the
                        main campaign, results not in metrics.json)
-archive/               every earlier project directory (Beam_surrogate_model/,
-                       Graph_rods_network/, Tests/, Dataset/), moved here by
-                       git mv once its useful code was ported into src/ --
-                       read-only, kept for history, not imported by anything
-Archives/               older, previously-archived work (untouched by this
-                       refactor; not the same directory as archive/ above)
+archives/              every earlier project directory (Beam_surrogate_model/,
+                       Graph_rods_network/, Tests/, Dataset/, comparaisons/,
+                       suppression_hautes_frequences/), moved here by git mv
+                       once its useful code was ported into src/ --
+                       read-only, kept for history, not imported by anything.
+                       The former archive/ and Archives/ folders were
+                       consolidated into this single archives/.
 ```
 
 ## Slurm
 
 ```bash
-sbatch scripts/run.job configs/runs/p0_baseline.yaml   # one run
+sbatch scripts/run.job runs/p0/p0_baseline/config.yaml   # one run
 ```
 
 `run.job` hardcodes `REPO_ROOT=/home/aph25/Code_GH` and

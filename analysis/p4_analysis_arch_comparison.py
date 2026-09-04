@@ -31,7 +31,7 @@
 #
 # Color/style encoding: 9 series exceeds the validated categorical palette's
 # fixed-order cap (dataviz skill, palette.md: 8 hues), so per the skill's own
-# rule ("never generate a 9th hue") ridge does NOT get a 9th hue -- it's a
+# rule ("never generate a 9th hue") linear does NOT get a 9th hue -- it's a
 # qualitatively different baseline (linear model, no hidden layer) styled as
 # a neutral black dotted reference line, same pattern this campaign already
 # uses for reference curves (p11/h2/h3's "(reference)" entries). The 8 MLP
@@ -82,7 +82,7 @@ SOURCES = [
     # results.yaml as of 2026-08-20) -- this entry makes it show up in the
     # table/figures automatically once it has, no script edit needed then.
     ("512+256+64 (reference)", "p4_arch_512_256_64", "#4a3aa7", (0, (3, 1, 1, 1))),
-    ("ridge (linear)", "p4_arch_ridge",      "#0b0b0b", ":"),
+    ("linear", "p4_arch_ridge",      "#0b0b0b", ":"),
 ]
 
 def _load(run_id: str) -> dict | None:
@@ -250,7 +250,7 @@ def _plot_error_all_archs(sources: list, metrics_by_run: dict, figures_dir: Path
     # metrics.py's compute_error_curves for how each is derived. Kept as one
     # parametrized function rather than two copies so SOURCES/
     # color-linestyle encoding can't drift apart between the two figures.
-    fig, ax = plt.subplots(figsize=(11, 6.5))
+    fig, ax = plt.subplots(figsize=(13, 6.5))
     n_plotted = 0
     for label, run_id, color, style in sources:
         c = metrics_by_run[run_id]["curves"]
@@ -271,12 +271,13 @@ def _plot_error_all_archs(sources: list, metrics_by_run: dict, figures_dir: Path
         plt.close(fig)
         return False
     ax.set_yscale("log")
-    ax.set_xlabel("t")
-    ax.set_ylabel(ylabel)
+    ax.set_xlabel("time (s)", fontsize=17)
+    ax.set_ylabel(ylabel, fontsize=17)
+    ax.tick_params(axis="both", labelsize=17)
     ax.grid(True, which="both", alpha=0.4)
-    ax.legend(loc="upper left", bbox_to_anchor=(1.02, 1.0), borderaxespad=0,
-              title="HIDDEN_SIZES", fontsize=9)
-    ax.set_title("P4 -- erreur de rollout vs temps, toutes architectures")
+    legend = ax.legend(loc="upper left", borderaxespad=0,
+                        title="HIDDEN_SIZES", fontsize=13)
+    plt.setp(legend.get_title(), fontsize=13)
     plt.tight_layout()
     plt.savefig(figures_dir / filename, dpi=150, bbox_inches="tight")
     plt.close(fig)
@@ -410,7 +411,7 @@ def main():
         f"Fastest surrogate rollout (nn wall-clock): {fastest_nn_label} "
         f"({metrics_by_run[fastest_nn_run]['scalars']['nn_time_med_s']*1000:.2f}ms)\n"
         f"Every MLP variant has fd/nn speedup < 1 (the trained surrogate is slower wall-clock "
-        f"than the FD solver it replaces at this problem size); only the linear ridge baseline "
+        f"than the FD solver it replaces at this problem size); only the linear baseline "
         f"beats it.\n"
         f"Full table: {run_dir / 'table.csv'}\n"
         f"Figures: {', '.join(str(figures_dir / n) for n in figure_names) or '(none written)'}\n"

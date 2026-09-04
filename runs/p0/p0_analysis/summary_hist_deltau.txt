@@ -1,0 +1,6 @@
+20260810_p0_hist_deltau (phase 0, H1) -- delta_u distribution (beam_dataset_simple.h5)
+delta_u horizon: 2 step(s) (0.0200 time units)
+Max |u| amplitude in dataset: 5.376284e-03
+Threshold (1% of max amplitude): 5.376284e-05
+Share of delta_u within threshold: 71.69%
+Total samples: 99,800,000

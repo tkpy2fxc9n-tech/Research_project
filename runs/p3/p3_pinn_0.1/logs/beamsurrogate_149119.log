@@ -1,0 +1,49 @@
+=== beamsurrogate [run] run_id=p3_pinn_0.1 model=mlp regime=pushforward stabilizer=none dataset=simple features=['U'] ===
+[mem] start: 0.57 Go
+Loaded 2000 trajectories from /home/aph25/Code_GH/data/beam_dataset_simple.h5
+Split distribution (from dataset):
+  train : 1817 simulations (90.8 %)
+  val   :   84 simulations (4.2 %)
+  test  :   99 simulations (5.0 %)
+[mem] after load_hdf5_dataset: 28.96 Go
+[mem] after compute_norm_stats: 28.96 Go
+MLP(
+  (net): Sequential(
+    (0): Linear(in_features=69, out_features=512, bias=True)
+    (1): GELU(approximate='none')
+    (2): Linear(in_features=512, out_features=256, bias=True)
+    (3): GELU(approximate='none')
+    (4): Linear(in_features=256, out_features=64, bias=True)
+    (5): GELU(approximate='none')
+    (6): Linear(in_features=64, out_features=2, bias=True)
+  )
+)
+Parameters: 183,746
+[mem] after make_dataloaders: 54.62 Go
+[mem] after trimming df to test split: 28.18 Go
+Epoch    1/100  --  data: 0.0109  |  pushforward: 0.3338  |  physics: 0.0244  |  L2 rel error (val): 0.9005
+Epoch    2/100  --  data: 0.0052  |  pushforward: 0.1564  |  physics: 0.0079  |  L2 rel error (val): 0.8330
+Epoch    3/100  --  data: 0.0049  |  pushforward: 0.1284  |  physics: 0.0081  |  L2 rel error (val): 0.9026
+Epoch    4/100  --  data: 0.0046  |  pushforward: 0.1067  |  physics: 0.0081  |  L2 rel error (val): 0.8234
+Epoch    5/100  --  data: 0.0048  |  pushforward: 0.1018  |  physics: 0.0086  |  L2 rel error (val): 9613.5300
+Epoch    6/100  --  data: 0.0041  |  pushforward: 0.0795  |  physics: 0.0074  |  L2 rel error (val): 0.9244
+Epoch    7/100  --  data: 0.0038  |  pushforward: 0.0676  |  physics: 0.0070  |  L2 rel error (val): 1.1372
+Epoch    8/100  --  data: 0.0036  |  pushforward: 0.0658  |  physics: 0.0067  |  L2 rel error (val): 0.8375
+Epoch    9/100  --  data: 0.0034  |  pushforward: 0.0578  |  physics: 0.0065  |  L2 rel error (val): 0.8240
+Epoch   10/100  --  data: 0.0032  |  pushforward: 0.0535  |  physics: 0.0062  |  L2 rel error (val): 0.8362
+Epoch   11/100  --  data: 0.0030  |  pushforward: 0.0467  |  physics: 0.0056  |  L2 rel error (val): nan
+Epoch   12/100  --  data: 0.0029  |  pushforward: 0.0467  |  physics: 0.0054  |  L2 rel error (val): 24488530500861048195200843776.0000
+Epoch   13/100  --  data: 0.0028  |  pushforward: 0.0437  |  physics: 0.0053  |  L2 rel error (val): 0.8300
+Epoch   14/100  --  data: 0.0028  |  pushforward: 0.0440  |  physics: 0.0055  |  L2 rel error (val): 625851923786492.2500
+Epoch   15/100  --  data: 0.0026  |  pushforward: 0.0390  |  physics: 0.0049  |  L2 rel error (val): 2183338.4372
+Epoch   16/100  --  data: 0.0023  |  pushforward: 0.0348  |  physics: 0.0046  |  L2 rel error (val): nan
+Epoch   17/100  --  data: 0.0026  |  pushforward: 0.0410  |  physics: 0.0048  |  L2 rel error (val): 1.1975
+Epoch   18/100  --  data: 0.0022  |  pushforward: 0.0331  |  physics: 0.0043  |  L2 rel error (val): nan
+Epoch   19/100  --  data: 0.0023  |  pushforward: 0.0333  |  physics: 0.0044  |  L2 rel error (val): 0.8243
+Early stopping at epoch 19: val loss hasn't improved for 15 epochs (best=0.823402).
+Best model reloaded -- minimum L2 rel error (val): 0.823402
+[mem] after training: 28.47 Go
+[mem] after evaluate_one_step: 28.55 Go
+[mem] after rollout + benchmark: 28.55 Go
+Done -- outputs in /home/aph25/Code_GH/runs/p3_pinn_0.1
+RUN DONE: configs/runs/p3_pinn_0.1.yaml

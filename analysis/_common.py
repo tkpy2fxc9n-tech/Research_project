@@ -188,6 +188,21 @@ def fmt_sci_mean_std(mean: float | None, std: float | None) -> str:
     return f"${m_mant} \\times 10^{{{int(m_exp)}}} \\pm {s_mant} \\times 10^{{{int(s_exp)}}}$"
 
 
+# -- median-only siblings: mean+/-std is misleading for metrics where a
+# handful of outlier trajectories (e.g. a diverged rollout) can be orders of
+# magnitude larger than the typical case -- the mean then reflects the
+# outliers, not the typical trajectory. Median is robust to that.
+def fmt_pct_median(median: float | None) -> str:
+    return "--" if median is None else f"{median:.1f}\\%"
+
+
+def fmt_sci_median(median: float | None) -> str:
+    if median is None:
+        return "--"
+    mantissa, exp = f"{median:.2e}".split("e")
+    return f"${mantissa} \\times 10^{{{int(exp)}}}$"
+
+
 def fmt_time_censored(median_reached: float | None, pct_reached: float | None) -> str:
     return "--" if median_reached is None else f"{median_reached:.2f}\\ ({pct_reached:.0f}\\%)"
 
@@ -207,6 +222,14 @@ def fmt_sci_mean_std_readable(mean: float | None, std: float | None) -> str:
 
 def fmt_time_censored_readable(median_reached: float | None, pct_reached: float | None) -> str:
     return "--" if median_reached is None else f"{median_reached:.2f}s ({pct_reached:.0f}%)"
+
+
+def fmt_pct_median_readable(median: float | None) -> str:
+    return "--" if median is None else f"{median:.1f}%"
+
+
+def fmt_sci_median_readable(median: float | None) -> str:
+    return "--" if median is None else f"{median:.2e}"
 
 
 # -- training duration -- scalars.train_time_s is wall-clock seconds for the

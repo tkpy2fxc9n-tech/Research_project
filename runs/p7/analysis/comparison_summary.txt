@@ -1,0 +1,12 @@
+p17 rectangular assembly (94-rod lattice) -- model comparison
+Ranked by relative mean |FD-NN| error over the whole lattice (lower is better).
+
+rank model                                         rel_mean%  rel_max%  ratio NN/FD  NN time (s)  NN/FD speed
+1    p7_dataset_medium_pinn_0.01                        3.14     59.04        0.875        16.41        10.24x
+2    p7_dataset_medium_ut                               3.32     45.72        0.787        14.23         8.87x
+3    p7_dataset_medium                                  5.00    103.29        1.202        14.88         9.58x
+4    p7_dataset_medium_arch_256_128_32_pinn_0.01        7.01    140.63        1.643         6.87         4.29x
+5    p7_dataset_medium_bidir                          252.214692867.90    46928.835        10.84         6.75x
+
+Best accuracy : p7_dataset_medium_pinn_0.01 (rel_mean=3.14%)
+Fastest NN    : p7_dataset_medium_arch_256_128_32_pinn_0.01 (nn_time=6.87s)

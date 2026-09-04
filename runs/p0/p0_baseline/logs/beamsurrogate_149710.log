@@ -1,0 +1,227 @@
+=== beamsurrogate [run] run_id=p0_baseline model=mlp regime=teacher_forcing stabilizer=none dataset=simple features=['U'] ===
+[mem] start: 0.58 Go
+Loaded 2000 trajectories from /home/aph25/Code_GH/data/beam_dataset_simple.h5
+Split distribution (from dataset):
+  train : 1817 simulations (90.8 %)
+  val   :   84 simulations (4.2 %)
+  test  :   99 simulations (5.0 %)
+[mem] after load_hdf5_dataset: 20.61 Go
+[mem] after compute_norm_stats: 20.61 Go
+MLP(
+  (net): Sequential(
+    (0): Linear(in_features=46, out_features=512, bias=True)
+    (1): GELU(approximate='none')
+    (2): Linear(in_features=512, out_features=256, bias=True)
+    (3): GELU(approximate='none')
+    (4): Linear(in_features=256, out_features=64, bias=True)
+    (5): GELU(approximate='none')
+    (6): Linear(in_features=64, out_features=3, bias=True)
+  )
+)
+Parameters: 172,035
+[mem] after make_dataloaders: 38.33 Go
+[mem] after trimming df to test split: 19.81 Go
+Epoch    1/200  --  data: 0.0026  |  val: 0.0007
+Epoch    2/200  --  data: 0.0004  |  val: 0.0009
+Epoch    3/200  --  data: 0.0003  |  val: 0.0007
+Epoch    4/200  --  data: 0.0002  |  val: 0.0002
+Epoch    5/200  --  data: 0.0002  |  val: 0.0003
+Epoch    6/200  --  data: 0.0002  |  val: 0.0003
+Epoch    7/200  --  data: 0.0001  |  val: 0.0002
+Epoch    8/200  --  data: 0.0001  |  val: 0.0001
+Epoch    9/200  --  data: 0.0001  |  val: 0.0003
+Epoch   10/200  --  data: 0.0001  |  val: 0.0002
+Epoch   11/200  --  data: 0.0001  |  val: 0.0001
+Epoch   12/200  --  data: 0.0001  |  val: 0.0002
+Epoch   13/200  --  data: 0.0001  |  val: 0.0001
+Epoch   14/200  --  data: 0.0001  |  val: 0.0001
+Epoch   15/200  --  data: 0.0001  |  val: 0.0002
+Epoch   16/200  --  data: 0.0001  |  val: 0.0003
+Epoch   17/200  --  data: 0.0001  |  val: 0.0002
+Epoch   18/200  --  data: 0.0001  |  val: 0.0001
+Epoch   19/200  --  data: 0.0001  |  val: 0.0005
+Epoch   20/200  --  data: 0.0001  |  val: 0.0001
+Epoch   21/200  --  data: 0.0001  |  val: 0.0001
+Epoch   22/200  --  data: 0.0001  |  val: 0.0001
+Epoch   23/200  --  data: 0.0001  |  val: 0.0001
+Epoch   24/200  --  data: 0.0001  |  val: 0.0001
+Epoch   25/200  --  data: 0.0001  |  val: 0.0001
+Epoch   26/200  --  data: 0.0001  |  val: 0.0003
+Epoch   27/200  --  data: 0.0001  |  val: 0.0001
+Epoch   28/200  --  data: 0.0001  |  val: 0.0002
+Epoch   29/200  --  data: 0.0001  |  val: 0.0003
+Epoch   30/200  --  data: 0.0001  |  val: 0.0001
+Epoch   31/200  --  data: 0.0001  |  val: 0.0001
+Epoch   32/200  --  data: 0.0001  |  val: 0.0002
+Epoch   33/200  --  data: 0.0001  |  val: 0.0001
+Epoch   34/200  --  data: 0.0001  |  val: 0.0001
+Epoch   35/200  --  data: 0.0001  |  val: 0.0001
+Epoch   36/200  --  data: 0.0001  |  val: 0.0002
+Epoch   37/200  --  data: 0.0001  |  val: 0.0002
+Epoch   38/200  --  data: 0.0001  |  val: 0.0001
+Epoch   39/200  --  data: 0.0001  |  val: 0.0001
+Epoch   40/200  --  data: 0.0001  |  val: 0.0001
+Epoch   41/200  --  data: 0.0001  |  val: 0.0001
+Epoch   42/200  --  data: 0.0001  |  val: 0.0001
+Epoch   43/200  --  data: 0.0001  |  val: 0.0001
+Epoch   44/200  --  data: 0.0001  |  val: 0.0001
+Epoch   45/200  --  data: 0.0001  |  val: 0.0001
+Epoch   46/200  --  data: 0.0001  |  val: 0.0001
+Epoch   47/200  --  data: 0.0001  |  val: 0.0001
+Epoch   48/200  --  data: 0.0001  |  val: 0.0001
+Epoch   49/200  --  data: 0.0001  |  val: 0.0001
+Epoch   50/200  --  data: 0.0001  |  val: 0.0001
+Epoch   51/200  --  data: 0.0001  |  val: 0.0001
+Epoch   52/200  --  data: 0.0001  |  val: 0.0001
+Epoch   53/200  --  data: 0.0001  |  val: 0.0001
+Epoch   54/200  --  data: 0.0001  |  val: 0.0001
+Epoch   55/200  --  data: 0.0001  |  val: 0.0001
+Epoch   56/200  --  data: 0.0001  |  val: 0.0001
+Epoch   57/200  --  data: 0.0001  |  val: 0.0001
+Epoch   58/200  --  data: 0.0001  |  val: 0.0001
+Epoch   59/200  --  data: 0.0001  |  val: 0.0001
+Epoch   60/200  --  data: 0.0001  |  val: 0.0001
+Epoch   61/200  --  data: 0.0001  |  val: 0.0001
+Epoch   62/200  --  data: 0.0001  |  val: 0.0001
+Epoch   63/200  --  data: 0.0000  |  val: 0.0001
+Epoch   64/200  --  data: 0.0000  |  val: 0.0001
+Epoch   65/200  --  data: 0.0000  |  val: 0.0001
+Epoch   66/200  --  data: 0.0000  |  val: 0.0000
+Epoch   67/200  --  data: 0.0000  |  val: 0.0001
+Epoch   68/200  --  data: 0.0000  |  val: 0.0000
+Epoch   69/200  --  data: 0.0000  |  val: 0.0000
+Epoch   70/200  --  data: 0.0000  |  val: 0.0000
+Epoch   71/200  --  data: 0.0000  |  val: 0.0000
+Epoch   72/200  --  data: 0.0000  |  val: 0.0000
+Epoch   73/200  --  data: 0.0000  |  val: 0.0000
+Epoch   74/200  --  data: 0.0000  |  val: 0.0000
+Epoch   75/200  --  data: 0.0000  |  val: 0.0000
+Epoch   76/200  --  data: 0.0000  |  val: 0.0000
+Epoch   77/200  --  data: 0.0000  |  val: 0.0000
+Epoch   78/200  --  data: 0.0000  |  val: 0.0000
+Epoch   79/200  --  data: 0.0000  |  val: 0.0000
+Epoch   80/200  --  data: 0.0000  |  val: 0.0000
+Epoch   81/200  --  data: 0.0000  |  val: 0.0000
+Epoch   82/200  --  data: 0.0000  |  val: 0.0000
+Epoch   83/200  --  data: 0.0000  |  val: 0.0000
+Epoch   84/200  --  data: 0.0000  |  val: 0.0000
+Epoch   85/200  --  data: 0.0000  |  val: 0.0000
+Epoch   86/200  --  data: 0.0000  |  val: 0.0000
+Epoch   87/200  --  data: 0.0000  |  val: 0.0000
+Epoch   88/200  --  data: 0.0000  |  val: 0.0000
+Epoch   89/200  --  data: 0.0000  |  val: 0.0000
+Epoch   90/200  --  data: 0.0000  |  val: 0.0000
+Epoch   91/200  --  data: 0.0000  |  val: 0.0000
+Epoch   92/200  --  data: 0.0000  |  val: 0.0000
+Epoch   93/200  --  data: 0.0000  |  val: 0.0000
+Epoch   94/200  --  data: 0.0000  |  val: 0.0000
+Epoch   95/200  --  data: 0.0000  |  val: 0.0000
+Epoch   96/200  --  data: 0.0000  |  val: 0.0000
+Epoch   97/200  --  data: 0.0000  |  val: 0.0000
+Epoch   98/200  --  data: 0.0000  |  val: 0.0000
+Epoch   99/200  --  data: 0.0000  |  val: 0.0000
+Epoch  100/200  --  data: 0.0000  |  val: 0.0000
+Epoch  101/200  --  data: 0.0000  |  val: 0.0000
+Epoch  102/200  --  data: 0.0000  |  val: 0.0000
+Epoch  103/200  --  data: 0.0000  |  val: 0.0000
+Epoch  104/200  --  data: 0.0000  |  val: 0.0000
+Epoch  105/200  --  data: 0.0000  |  val: 0.0000
+Epoch  106/200  --  data: 0.0000  |  val: 0.0000
+Epoch  107/200  --  data: 0.0000  |  val: 0.0000
+Epoch  108/200  --  data: 0.0000  |  val: 0.0000
+Epoch  109/200  --  data: 0.0000  |  val: 0.0000
+Epoch  110/200  --  data: 0.0000  |  val: 0.0000
+Epoch  111/200  --  data: 0.0000  |  val: 0.0000
+Epoch  112/200  --  data: 0.0000  |  val: 0.0000
+Epoch  113/200  --  data: 0.0000  |  val: 0.0000
+Epoch  114/200  --  data: 0.0000  |  val: 0.0000
+Epoch  115/200  --  data: 0.0000  |  val: 0.0000
+Epoch  116/200  --  data: 0.0000  |  val: 0.0000
+Epoch  117/200  --  data: 0.0000  |  val: 0.0000
+Epoch  118/200  --  data: 0.0000  |  val: 0.0000
+Epoch  119/200  --  data: 0.0000  |  val: 0.0000
+Epoch  120/200  --  data: 0.0000  |  val: 0.0000
+Epoch  121/200  --  data: 0.0000  |  val: 0.0000
+Epoch  122/200  --  data: 0.0000  |  val: 0.0000
+Epoch  123/200  --  data: 0.0000  |  val: 0.0000
+Epoch  124/200  --  data: 0.0000  |  val: 0.0000
+Epoch  125/200  --  data: 0.0000  |  val: 0.0000
+Epoch  126/200  --  data: 0.0000  |  val: 0.0000
+Epoch  127/200  --  data: 0.0000  |  val: 0.0000
+Epoch  128/200  --  data: 0.0000  |  val: 0.0000
+Epoch  129/200  --  data: 0.0000  |  val: 0.0000
+Epoch  130/200  --  data: 0.0000  |  val: 0.0000
+Epoch  131/200  --  data: 0.0000  |  val: 0.0000
+Epoch  132/200  --  data: 0.0000  |  val: 0.0000
+Epoch  133/200  --  data: 0.0000  |  val: 0.0000
+Epoch  134/200  --  data: 0.0000  |  val: 0.0000
+Epoch  135/200  --  data: 0.0000  |  val: 0.0000
+Epoch  136/200  --  data: 0.0000  |  val: 0.0000
+Epoch  137/200  --  data: 0.0000  |  val: 0.0000
+Epoch  138/200  --  data: 0.0000  |  val: 0.0000
+Epoch  139/200  --  data: 0.0000  |  val: 0.0000
+Epoch  140/200  --  data: 0.0000  |  val: 0.0000
+Epoch  141/200  --  data: 0.0000  |  val: 0.0000
+Epoch  142/200  --  data: 0.0000  |  val: 0.0000
+Epoch  143/200  --  data: 0.0000  |  val: 0.0000
+Epoch  144/200  --  data: 0.0000  |  val: 0.0000
+Epoch  145/200  --  data: 0.0000  |  val: 0.0000
+Epoch  146/200  --  data: 0.0000  |  val: 0.0000
+Epoch  147/200  --  data: 0.0000  |  val: 0.0000
+Epoch  148/200  --  data: 0.0000  |  val: 0.0000
+Epoch  149/200  --  data: 0.0000  |  val: 0.0000
+Epoch  150/200  --  data: 0.0000  |  val: 0.0000
+Epoch  151/200  --  data: 0.0000  |  val: 0.0000
+Epoch  152/200  --  data: 0.0000  |  val: 0.0000
+Epoch  153/200  --  data: 0.0000  |  val: 0.0000
+Epoch  154/200  --  data: 0.0000  |  val: 0.0000
+Epoch  155/200  --  data: 0.0000  |  val: 0.0000
+Epoch  156/200  --  data: 0.0000  |  val: 0.0000
+Epoch  157/200  --  data: 0.0000  |  val: 0.0000
+Epoch  158/200  --  data: 0.0000  |  val: 0.0000
+Epoch  159/200  --  data: 0.0000  |  val: 0.0000
+Epoch  160/200  --  data: 0.0000  |  val: 0.0000
+Epoch  161/200  --  data: 0.0000  |  val: 0.0000
+Epoch  162/200  --  data: 0.0000  |  val: 0.0000
+Epoch  163/200  --  data: 0.0000  |  val: 0.0000
+Epoch  164/200  --  data: 0.0000  |  val: 0.0000
+Epoch  165/200  --  data: 0.0000  |  val: 0.0000
+Epoch  166/200  --  data: 0.0000  |  val: 0.0000
+Epoch  167/200  --  data: 0.0000  |  val: 0.0000
+Epoch  168/200  --  data: 0.0000  |  val: 0.0000
+Epoch  169/200  --  data: 0.0000  |  val: 0.0000
+Epoch  170/200  --  data: 0.0000  |  val: 0.0000
+Epoch  171/200  --  data: 0.0000  |  val: 0.0000
+Epoch  172/200  --  data: 0.0000  |  val: 0.0000
+Epoch  173/200  --  data: 0.0000  |  val: 0.0000
+Epoch  174/200  --  data: 0.0000  |  val: 0.0000
+Epoch  175/200  --  data: 0.0000  |  val: 0.0000
+Epoch  176/200  --  data: 0.0000  |  val: 0.0000
+Epoch  177/200  --  data: 0.0000  |  val: 0.0000
+Epoch  178/200  --  data: 0.0000  |  val: 0.0000
+Epoch  179/200  --  data: 0.0000  |  val: 0.0000
+Epoch  180/200  --  data: 0.0000  |  val: 0.0000
+Epoch  181/200  --  data: 0.0000  |  val: 0.0000
+Epoch  182/200  --  data: 0.0000  |  val: 0.0000
+Epoch  183/200  --  data: 0.0000  |  val: 0.0000
+Epoch  184/200  --  data: 0.0000  |  val: 0.0000
+Epoch  185/200  --  data: 0.0000  |  val: 0.0000
+Epoch  186/200  --  data: 0.0000  |  val: 0.0000
+Epoch  187/200  --  data: 0.0000  |  val: 0.0000
+Epoch  188/200  --  data: 0.0000  |  val: 0.0000
+Epoch  189/200  --  data: 0.0000  |  val: 0.0000
+Epoch  190/200  --  data: 0.0000  |  val: 0.0000
+Epoch  191/200  --  data: 0.0000  |  val: 0.0000
+Epoch  192/200  --  data: 0.0000  |  val: 0.0000
+Epoch  193/200  --  data: 0.0000  |  val: 0.0000
+Epoch  194/200  --  data: 0.0000  |  val: 0.0000
+Epoch  195/200  --  data: 0.0000  |  val: 0.0000
+Epoch  196/200  --  data: 0.0000  |  val: 0.0000
+Epoch  197/200  --  data: 0.0000  |  val: 0.0000
+Epoch  198/200  --  data: 0.0000  |  val: 0.0000
+Epoch  199/200  --  data: 0.0000  |  val: 0.0000
+Epoch  200/200  --  data: 0.0000  |  val: 0.0000
+Best model reloaded -- minimum val: 0.000008
+[mem] after training: 20.11 Go
+[mem] after evaluate_one_step: 20.23 Go
+[mem] after rollout + benchmark: 20.23 Go

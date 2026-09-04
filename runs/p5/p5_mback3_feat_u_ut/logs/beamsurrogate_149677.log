@@ -1,0 +1,48 @@
+=== beamsurrogate [run] run_id=p5_mback3_feat_u_ut model=mlp regime=pushforward stabilizer=none dataset=simple features=['U', 'Ut'] ===
+[mem] start: 0.58 Go
+Loaded 2000 trajectories from /home/aph25/Code_GH/data/beam_dataset_simple.h5
+Split distribution (from dataset):
+  train : 1817 simulations (90.8 %)
+  val   :   84 simulations (4.2 %)
+  test  :   99 simulations (5.0 %)
+[mem] after load_hdf5_dataset: 55.21 Go
+[mem] after compute_norm_stats: 55.21 Go
+MLP(
+  (net): Sequential(
+    (0): Linear(in_features=138, out_features=512, bias=True)
+    (1): GELU(approximate='none')
+    (2): Linear(in_features=512, out_features=256, bias=True)
+    (3): GELU(approximate='none')
+    (4): Linear(in_features=256, out_features=64, bias=True)
+    (5): GELU(approximate='none')
+    (6): Linear(in_features=64, out_features=3, bias=True)
+  )
+)
+Parameters: 219,139
+[mem] after make_dataloaders: 105.81 Go
+[mem] after trimming df to test split: 54.41 Go
+Epoch    1/100  --  data: 0.0098  |  pushforward: 0.3765  |  physics: 0.0000  |  comparable loss (val): 0.0435
+Epoch    2/100  --  data: 0.0052  |  pushforward: 0.1310  |  physics: 0.0000  |  comparable loss (val): 0.0064
+Epoch    3/100  --  data: 0.0044  |  pushforward: 0.0887  |  physics: 0.0000  |  comparable loss (val): 0.0047
+Epoch    4/100  --  data: 0.0053  |  pushforward: 0.0900  |  physics: 0.0000  |  comparable loss (val): 0.0938
+Epoch    5/100  --  data: 0.0057  |  pushforward: 0.0824  |  physics: 0.0000  |  comparable loss (val): 0.0930
+Epoch    6/100  --  data: 0.0049  |  pushforward: 0.0665  |  physics: 0.0000  |  comparable loss (val): 0.0071
+Epoch    7/100  --  data: 0.0045  |  pushforward: 0.0598  |  physics: 0.0000  |  comparable loss (val): 0.0051
+Epoch    8/100  --  data: 0.0043  |  pushforward: 0.0567  |  physics: 0.0000  |  comparable loss (val): 0.1219
+Epoch    9/100  --  data: 0.0040  |  pushforward: 0.0519  |  physics: 0.0000  |  comparable loss (val): 0.0925
+Epoch   10/100  --  data: 0.0035  |  pushforward: 0.0438  |  physics: 0.0000  |  comparable loss (val): 0.0086
+Epoch   11/100  --  data: 0.0035  |  pushforward: 0.0425  |  physics: 0.0000  |  comparable loss (val): 0.0193
+Epoch   12/100  --  data: 0.0034  |  pushforward: 0.0408  |  physics: 0.0000  |  comparable loss (val): 0.0077
+Epoch   13/100  --  data: 0.0032  |  pushforward: 0.0375  |  physics: 0.0000  |  comparable loss (val): 0.0266
+Epoch   14/100  --  data: 0.0031  |  pushforward: 0.0366  |  physics: 0.0000  |  comparable loss (val): 0.0365
+Epoch   15/100  --  data: 0.0027  |  pushforward: 0.0301  |  physics: 0.0000  |  comparable loss (val): 0.0067
+Epoch   16/100  --  data: 0.0027  |  pushforward: 0.0312  |  physics: 0.0000  |  comparable loss (val): 0.0162
+Epoch   17/100  --  data: 0.0027  |  pushforward: 0.0322  |  physics: 0.0000  |  comparable loss (val): 0.0171
+Epoch   18/100  --  data: 0.0027  |  pushforward: 0.0310  |  physics: 0.0000  |  comparable loss (val): 0.0332
+Early stopping at epoch 18: val loss hasn't improved for 15 epochs (best=0.004652).
+Best model reloaded -- minimum comparable loss (val): 0.004652
+[mem] after training: 54.69 Go
+[mem] after evaluate_one_step: 54.80 Go
+[mem] after rollout + benchmark: 54.80 Go
+Done -- outputs in runs/p5/p5_mback3_feat_u_ut
+RUN DONE: runs/p5/p5_mback3_feat_u_ut/config.yaml

@@ -1,0 +1,74 @@
+WARNING: N_FWD*ndt=12 > SS=11 -- a rollout hop can reach past the stencil built at hop start (receptive-field constraint violated).
+WARNING: N_FWD*ndt=12 > SS=11 -- a rollout hop can reach past the stencil built at hop start (receptive-field constraint violated).
+=== beamsurrogate [run] run_id=p2_nfwd4 model=mlp regime=pushforward stabilizer=none dataset=simple features=['U'] ===
+[mem] start: 0.58 Go
+Loaded 2000 trajectories from /home/aph25/Code_GH/data/beam_dataset_simple.h5
+Split distribution (from dataset):
+  train : 1817 simulations (90.8 %)
+  val   :   84 simulations (4.2 %)
+  test  :   99 simulations (5.0 %)
+[mem] after load_hdf5_dataset: 20.87 Go
+[mem] after compute_norm_stats: 20.87 Go
+MLP(
+  (net): Sequential(
+    (0): Linear(in_features=46, out_features=512, bias=True)
+    (1): GELU(approximate='none')
+    (2): Linear(in_features=512, out_features=256, bias=True)
+    (3): GELU(approximate='none')
+    (4): Linear(in_features=256, out_features=64, bias=True)
+    (5): GELU(approximate='none')
+    (6): Linear(in_features=64, out_features=4, bias=True)
+  )
+)
+Parameters: 172,100
+[mem] after make_dataloaders: 38.84 Go
+[mem] after trimming df to test split: 20.07 Go
+Epoch    1/100  --  data: 0.0280  |  pushforward: 0.8249  |  physics: 0.0000  |  comparable loss (val): 0.1062
+Epoch    2/100  --  data: 0.0129  |  pushforward: 0.2910  |  physics: 0.0000  |  comparable loss (val): 0.1071
+Epoch    3/100  --  data: 0.0140  |  pushforward: 0.2669  |  physics: 0.0000  |  comparable loss (val): 0.0709
+Epoch    4/100  --  data: 0.0138  |  pushforward: 0.2295  |  physics: 0.0000  |  comparable loss (val): 0.1899
+Epoch    5/100  --  data: 0.0148  |  pushforward: 0.2328  |  physics: 0.0000  |  comparable loss (val): 0.0703
+Epoch    6/100  --  data: 0.0133  |  pushforward: 0.1954  |  physics: 0.0000  |  comparable loss (val): 0.1011
+Epoch    7/100  --  data: 0.0119  |  pushforward: 0.1751  |  physics: 0.0000  |  comparable loss (val): 0.0789
+Epoch    8/100  --  data: 0.0111  |  pushforward: 0.1634  |  physics: 0.0000  |  comparable loss (val): 0.1322
+Epoch    9/100  --  data: 0.0103  |  pushforward: 0.1551  |  physics: 0.0000  |  comparable loss (val): 0.1765
+Epoch   10/100  --  data: 0.0102  |  pushforward: 0.1530  |  physics: 0.0000  |  comparable loss (val): 0.1201
+Epoch   11/100  --  data: 0.0092  |  pushforward: 0.1361  |  physics: 0.0000  |  comparable loss (val): 0.3830
+Epoch   12/100  --  data: 0.0091  |  pushforward: 0.1324  |  physics: 0.0000  |  comparable loss (val): 0.0951
+Epoch   13/100  --  data: 0.0086  |  pushforward: 0.1237  |  physics: 0.0000  |  comparable loss (val): 0.0335
+Epoch   14/100  --  data: 0.0080  |  pushforward: 0.1179  |  physics: 0.0000  |  comparable loss (val): 0.0822
+Epoch   15/100  --  data: 0.0075  |  pushforward: 0.1114  |  physics: 0.0000  |  comparable loss (val): 0.0716
+Epoch   16/100  --  data: 0.0071  |  pushforward: 0.1073  |  physics: 0.0000  |  comparable loss (val): 0.2094
+Epoch   17/100  --  data: 0.0070  |  pushforward: 0.1078  |  physics: 0.0000  |  comparable loss (val): 0.0419
+Epoch   18/100  --  data: 0.0068  |  pushforward: 0.1021  |  physics: 0.0000  |  comparable loss (val): 0.2340
+Epoch   19/100  --  data: 0.0065  |  pushforward: 0.0972  |  physics: 0.0000  |  comparable loss (val): 0.0664
+Epoch   20/100  --  data: 0.0063  |  pushforward: 0.0929  |  physics: 0.0000  |  comparable loss (val): 0.0584
+Epoch   21/100  --  data: 0.0062  |  pushforward: 0.0899  |  physics: 0.0000  |  comparable loss (val): 0.0759
+Epoch   22/100  --  data: 0.0060  |  pushforward: 0.0878  |  physics: 0.0000  |  comparable loss (val): 0.1843
+Epoch   23/100  --  data: 0.0060  |  pushforward: 0.0886  |  physics: 0.0000  |  comparable loss (val): 0.2759
+Epoch   24/100  --  data: 0.0060  |  pushforward: 0.0903  |  physics: 0.0000  |  comparable loss (val): 0.0363
+Epoch   25/100  --  data: 0.0055  |  pushforward: 0.0828  |  physics: 0.0000  |  comparable loss (val): 0.0709
+Epoch   26/100  --  data: 0.0055  |  pushforward: 0.0813  |  physics: 0.0000  |  comparable loss (val): 0.0253
+Epoch   27/100  --  data: 0.0056  |  pushforward: 0.0849  |  physics: 0.0000  |  comparable loss (val): 0.0114
+Epoch   28/100  --  data: 0.0053  |  pushforward: 0.0787  |  physics: 0.0000  |  comparable loss (val): 3.2087
+Epoch   29/100  --  data: 0.0055  |  pushforward: 0.0810  |  physics: 0.0000  |  comparable loss (val): 0.0205
+Epoch   30/100  --  data: 0.0050  |  pushforward: 0.0712  |  physics: 0.0000  |  comparable loss (val): 0.0781
+Epoch   31/100  --  data: 0.0053  |  pushforward: 0.0793  |  physics: 0.0000  |  comparable loss (val): 0.0156
+Epoch   32/100  --  data: 0.0050  |  pushforward: 0.0743  |  physics: 0.0000  |  comparable loss (val): 0.0625
+Epoch   33/100  --  data: 0.0049  |  pushforward: 0.0724  |  physics: 0.0000  |  comparable loss (val): 0.0579
+Epoch   34/100  --  data: 0.0049  |  pushforward: 0.0715  |  physics: 0.0000  |  comparable loss (val): 0.0329
+Epoch   35/100  --  data: 0.0048  |  pushforward: 0.0685  |  physics: 0.0000  |  comparable loss (val): 0.2164
+Epoch   36/100  --  data: 0.0047  |  pushforward: 0.0696  |  physics: 0.0000  |  comparable loss (val): 0.0189
+Epoch   37/100  --  data: 0.0048  |  pushforward: 0.0704  |  physics: 0.0000  |  comparable loss (val): 0.0558
+Epoch   38/100  --  data: 0.0047  |  pushforward: 0.0698  |  physics: 0.0000  |  comparable loss (val): 0.0597
+Epoch   39/100  --  data: 0.0051  |  pushforward: 0.0751  |  physics: 0.0000  |  comparable loss (val): 0.0389
+Epoch   40/100  --  data: 0.0045  |  pushforward: 0.0639  |  physics: 0.0000  |  comparable loss (val): 0.1909
+Epoch   41/100  --  data: 0.0044  |  pushforward: 0.0646  |  physics: 0.0000  |  comparable loss (val): 0.0302
+Epoch   42/100  --  data: 0.0044  |  pushforward: 0.0642  |  physics: 0.0000  |  comparable loss (val): 0.0605
+Early stopping at epoch 42: val loss hasn't improved for 15 epochs (best=0.011402).
+Best model reloaded -- minimum comparable loss (val): 0.011402
+[mem] after training: 20.41 Go
+[mem] after evaluate_one_step: 20.56 Go
+[mem] after rollout + benchmark: 20.56 Go
+Done -- outputs in runs/p2/p2_nfwd4
+RUN DONE: runs/p2/p2_nfwd4/config.yaml

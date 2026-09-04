@@ -1,0 +1,2 @@
+=== beamsurrogate [run] run_id=p3_pinn_0 model=mlp regime=pushforward stabilizer=none dataset=simple features=['U', 'Ut'] ===
+[mem] start: 0.58 Go

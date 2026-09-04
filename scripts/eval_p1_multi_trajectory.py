@@ -36,7 +36,7 @@ from beamsurrogate.evaluate.metrics import (  # noqa: E402
 
 RUNS_DIR = REPO_ROOT / "runs"
 OUT_DIR = RUNS_DIR / "p1_analysis"
-SOURCES = {"Pushforward": "p1_pushforward", "FBPTT": "p1_bptt"}
+SOURCES = {"Pushforward": "p1_pushforward", "TBPTT": "p1_bptt"}
 
 
 def main():

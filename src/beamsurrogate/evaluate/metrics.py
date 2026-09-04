@@ -384,6 +384,7 @@ def aggregate_multi_rollout_metrics(records: list[dict]) -> dict:
         summary[key] = {
             "pct_reached": 100.0 * len(vals) / n if n else None,
             "median_reached": float(np.median(vals)) if vals else None,
+            "std_reached": float(np.std(vals)) if vals else None,
             "n_reached": len(vals),
         }
     return summary

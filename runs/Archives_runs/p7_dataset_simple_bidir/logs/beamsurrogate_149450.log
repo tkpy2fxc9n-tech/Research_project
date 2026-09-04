@@ -1,0 +1,56 @@
+=== beamsurrogate [run] run_id=p7_dataset_simple_bidir model=mlp regime=pushforward stabilizer=none dataset=simple_bidir features=['U', 'Ut'] ===
+[mem] start: 0.57 Go
+Loaded 2000 trajectories from /home/aph25/Code_GH/data/beam_dataset_simple_bidir.h5
+Split distribution (from dataset):
+  train : 1789 simulations (89.5 %)
+  val   :   95 simulations (4.8 %)
+  test  :  116 simulations (5.8 %)
+[mem] after load_hdf5_dataset: 55.15 Go
+[mem] after compute_norm_stats: 55.15 Go
+MLP(
+  (net): Sequential(
+    (0): Linear(in_features=138, out_features=512, bias=True)
+    (1): GELU(approximate='none')
+    (2): Linear(in_features=512, out_features=256, bias=True)
+    (3): GELU(approximate='none')
+    (4): Linear(in_features=256, out_features=64, bias=True)
+    (5): GELU(approximate='none')
+    (6): Linear(in_features=64, out_features=2, bias=True)
+  )
+)
+Parameters: 219,074
+[mem] after make_dataloaders: 105.22 Go
+[mem] after trimming df to test split: 54.35 Go
+Epoch    1/100  --  data: 0.0118  |  pushforward: 0.4337  |  physics: 0.0804  |  L2 rel error (val): 1.1472
+Epoch    2/100  --  data: 0.0030  |  pushforward: 0.0333  |  physics: 0.0156  |  L2 rel error (val): 1.0304
+Epoch    3/100  --  data: 0.0029  |  pushforward: 0.0209  |  physics: 0.0133  |  L2 rel error (val): 6.1050
+Epoch    4/100  --  data: 0.0038  |  pushforward: 0.0292  |  physics: 0.0151  |  L2 rel error (val): 1660908.5271
+Epoch    5/100  --  data: 0.0026  |  pushforward: 0.0135  |  physics: 0.0115  |  L2 rel error (val): 4.9176
+Epoch    6/100  --  data: 0.0034  |  pushforward: 0.0219  |  physics: 0.0137  |  L2 rel error (val): 5.6960
+Epoch    7/100  --  data: 0.0018  |  pushforward: 0.0085  |  physics: 0.0080  |  L2 rel error (val): 1.1343
+Epoch    8/100  --  data: 0.0016  |  pushforward: 0.0072  |  physics: 0.0071  |  L2 rel error (val): 9.8157
+Epoch    9/100  --  data: 0.0036  |  pushforward: 0.0261  |  physics: 0.0133  |  L2 rel error (val): 305.4888
+Epoch   10/100  --  data: 0.0014  |  pushforward: 0.0063  |  physics: 0.0062  |  L2 rel error (val): 1.3201
+Epoch   11/100  --  data: 0.0012  |  pushforward: 0.0056  |  physics: 0.0056  |  L2 rel error (val): 0.9907
+Epoch   12/100  --  data: 0.0027  |  pushforward: 0.0172  |  physics: 0.0103  |  L2 rel error (val): 1.8619
+Epoch   13/100  --  data: 0.0011  |  pushforward: 0.0052  |  physics: 0.0050  |  L2 rel error (val): 1.0953
+Epoch   14/100  --  data: 0.0011  |  pushforward: 0.0048  |  physics: 0.0046  |  L2 rel error (val): 1.3598
+Epoch   15/100  --  data: 0.0039  |  pushforward: 0.0389  |  physics: 0.0155  |  L2 rel error (val): 4.2901
+Epoch   16/100  --  data: 0.0010  |  pushforward: 0.0048  |  physics: 0.0044  |  L2 rel error (val): 429.0216
+Epoch   17/100  --  data: 0.0027  |  pushforward: 0.0214  |  physics: 0.0114  |  L2 rel error (val): 4200.5784
+Epoch   18/100  --  data: 0.0027  |  pushforward: 0.0243  |  physics: 0.0117  |  L2 rel error (val): 5015.2425
+Epoch   19/100  --  data: 0.0040  |  pushforward: 0.0432  |  physics: 0.0193  |  L2 rel error (val): 187077.0974
+Epoch   20/100  --  data: 0.0011  |  pushforward: 0.0061  |  physics: 0.0045  |  L2 rel error (val): 1482.1033
+Epoch   21/100  --  data: 0.0008  |  pushforward: 0.0036  |  physics: 0.0036  |  L2 rel error (val): 1.0174
+Epoch   22/100  --  data: 0.0007  |  pushforward: 0.0031  |  physics: 0.0033  |  L2 rel error (val): 80.4715
+Epoch   23/100  --  data: 0.0009  |  pushforward: 0.0044  |  physics: 0.0036  |  L2 rel error (val): 51217.3209
+Epoch   24/100  --  data: 0.0007  |  pushforward: 0.0029  |  physics: 0.0030  |  L2 rel error (val): 1.4363
+Epoch   25/100  --  data: 0.0007  |  pushforward: 0.0028  |  physics: 0.0030  |  L2 rel error (val): 8.4258
+Epoch   26/100  --  data: 0.0007  |  pushforward: 0.0028  |  physics: 0.0029  |  L2 rel error (val): 535.2679
+Early stopping at epoch 26: val loss hasn't improved for 15 epochs (best=0.990717).
+Best model reloaded -- minimum L2 rel error (val): 0.990717
+[mem] after training: 54.59 Go
+[mem] after evaluate_one_step: 54.70 Go
+[mem] after rollout + benchmark: 54.70 Go
+Done -- outputs in /home/aph25/Code_GH/runs/p7_dataset_simple_bidir
+RUN DONE: configs/runs/p7_dataset_simple_bidir.yaml

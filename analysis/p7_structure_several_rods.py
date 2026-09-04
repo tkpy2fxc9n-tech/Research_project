@@ -45,6 +45,7 @@ from __future__ import annotations
 import argparse
 import gc
 import os
+import shutil
 import sys
 import time
 from pathlib import Path
@@ -483,6 +484,22 @@ def compute_metrics(source_run_id: str, fd_steps, fd_U, nn_steps, nn_U, fd_time_
     return metrics
 
 
+def first_crossing_times(err_U, err_t, fd_peak: float) -> tuple[float | None, float | None]:
+    # T_5%^max / T_10%^max: first time the worst-lattice-point error crosses
+    # 5% / 10% of the FD peak (T_10% is the same quantity as compute_metrics'
+    # t_div, computed independently here since callers like
+    # p7_export_latex_report.py/p7_analysis_assembly_metrics.py work from a
+    # freshly rebuilt err_U rather than compute_metrics' fd_idx/nn_idx pair).
+    err_max_curve = np.abs(err_U).max(axis=(1, 2))
+
+    def _crossing(level_pct):
+        level = level_pct / 100.0 * fd_peak
+        above = err_max_curve > level
+        return float(err_t[above][0]) if above.any() else None
+
+    return _crossing(5), _crossing(10)
+
+
 def write_summary_txt(metrics: dict, out_path: Path, tag: str | None = None) -> None:
     m = metrics
     excitation_desc = "gaussian pulse" if tag is None else f"held-out test trajectory ({tag})"
@@ -695,7 +712,7 @@ def _make_figures(source_run_id, cfg, lattice, fd_steps, fd_U, nn_steps, nn_U, o
 
         rows = (("FD reference", fd_U, fd_idx, "fd", 0.0, U_MAX, "Reds", "|u|"),
                 ("NN surrogate", nn_U, nn_idx, "nn", 0.0, U_MAX, "Reds", "|u|"),
-                ("|FD - NN| error", err_U, e_idx, "err", 0.0, float(np.abs(err_U).max()), "Oranges", "|FD - NN|"))
+                ("|FD - NN| error", err_U, e_idx, "err", 0.0, U_MAX, "Reds", "|FD - NN|"))
         for row_label, U_frames, idx_list, kind, vmin, vmax, cmap, cbar_label in rows:
             for tag, idx in zip(target_tag, idx_list):
                 u = np.abs(U_frames[idx].ravel())
@@ -705,45 +722,92 @@ def _make_figures(source_run_id, cfg, lattice, fd_steps, fd_U, nn_steps, nn_U, o
                 ax.set_xticks([]); ax.set_yticks([])
                 for spine in ax.spines.values():
                     spine.set_visible(False)
-                cbar = fig.colorbar(scat, ax=ax, fraction=0.046, pad=0.04)
-                cbar.set_label(cbar_label, fontsize=9)
-                cbar.ax.tick_params(labelsize=8)
-                fig.tight_layout()
+                # The structure's aspect (wide/short lattice here) is nowhere near the
+                # figure's own -- under aspect="equal" matplotlib shrinks ax's box to
+                # match it, but only once the layout is actually drawn. A colorbar
+                # attached via fraction=... BEFORE that draw sizes itself off the
+                # pre-shrink (full-height) box, so it ends up much taller than the
+                # structure it's labeling. Force the draw first, then size a colorbar
+                # axes off ax's real (post-shrink) height so the two match.
+                fig.canvas.draw()
+                pos = ax.get_position()
+                cax = fig.add_axes([pos.x1 + 0.02, pos.y0, 0.03, pos.height])
+                cbar = fig.colorbar(scat, cax=cax)
+                cbar.set_label(cbar_label, fontsize=14)
+                cbar.ax.tick_params(labelsize=12)
                 out_path = out_dir / f"panel_{kind}_{tag}.png"
-                fig.savefig(out_path, dpi=150)
+                fig.savefig(out_path, dpi=150, bbox_inches="tight")
                 plt.close(fig)
         print(f"Saved {3 * len(target_t)} panels to {out_dir.name}/")
 
     save_snapshots_single(figures_dir / "snapshots")
 
-    def save_threshold_violation_map(out_path, level_pct=5):
-        # Static spatial map (thesis Figure 25): per lattice point, the
-        # FRACTION OF THE ROLLOUT during which |FD-NN| exceeded level_pct%
-        # of the FD peak -- not just whether it ever crossed once. A binary
-        # "ever exceeds" flag saturates towards "every point violates" on a
-        # long rollout (every point crosses once, eventually) and hides
-        # which points are the actual worst/most recurrent offenders; this
-        # continuous version is the per-location analogue of
-        # save_percent_exceeding_curve's aggregate time curve above.
+    def frac_time_violating_at(level_pct):
+        # Per lattice point, the FRACTION OF THE ROLLOUT during which
+        # |FD-NN| exceeded level_pct% of the FD peak -- not just whether it
+        # ever crossed once. A binary "ever exceeds" flag saturates towards
+        # "every point violates" on a long rollout (every point crosses once,
+        # eventually) and hides which points are the actual worst/most
+        # recurrent offenders; this continuous version is the per-location
+        # analogue of save_percent_exceeding_curve's aggregate time curve above.
         level = (level_pct / 100.0) * FD_PEAK
-        frac_time_violating = 100.0 * (np.abs(err_U) > level).mean(axis=0).ravel()
-        fig, ax = plt.subplots(figsize=(10.8, 4.5))
+        return 100.0 * (np.abs(err_U) > level).mean(axis=0).ravel()
+
+    def save_threshold_violation_map(out_path, level_pct=5):
+        # Static spatial map (thesis Figure 25).
+        frac_time_violating = frac_time_violating_at(level_pct)
+        # Taller than the structure alone needs (unlike save_snapshots_single's
+        # panels, this one's colorbar carries a full-sentence label that, at
+        # this fontsize, is longer than the structure itself is tall -- extra
+        # figure height gives the label room without it getting clipped by
+        # bbox_inches="tight").
+        fig, ax = plt.subplots(figsize=(10.8, 6.5))
         scat = ax.scatter(XS, YS, c=frac_time_violating, cmap="Oranges", vmin=0.0, vmax=100.0, s=15)
         ax.set_xlim(X_LO, X_HI); ax.set_ylim(Y_LO, Y_HI); ax.set_aspect("equal")
         ax.set_xticks([]); ax.set_yticks([])
         for spine in ax.spines.values():
             spine.set_visible(False)
         cbar = fig.colorbar(scat, ax=ax, fraction=0.04, pad=0.03)
-        cbar.set_label(f"% of rollout time with |FD-NN| > {level_pct}% of FD peak", fontsize=9)
-        cbar.ax.tick_params(labelsize=8)
-        ax.set_title(f"{source_run_id} -- how often each location exceeds {level_pct}% of FD peak error",
-                     fontsize=12, fontweight="bold")
+        cbar.set_label(f"% of rollout time with |FD-NN| > {level_pct}% of FD peak", fontsize=14)
+        cbar.ax.tick_params(labelsize=12)
+        fig.savefig(out_path, dpi=150, bbox_inches="tight")
+        plt.close(fig)
+        print(f"Saved {out_path.name}")
+
+    def save_worst_points_map(out_path, rank_level_pct=5, top_pct=10):
+        # Binary spatial map: highlights the top_pct% of lattice points
+        # ranked by frac_time_violating_at(rank_level_pct) -- i.e. the points
+        # that violate the rank_level_pct% threshold most often over the
+        # rollout, not points exceeding some fixed error magnitude.
+        frac_time_violating = frac_time_violating_at(rank_level_pct)
+        cutoff = np.percentile(frac_time_violating, 100.0 - top_pct)
+        is_worst = frac_time_violating >= cutoff
+        fig, ax = plt.subplots(figsize=(10.8, 4.5))
+        ax.scatter(XS[~is_worst], YS[~is_worst], c="#d9d9d9", s=15)
+        ax.scatter(XS[is_worst], YS[is_worst], c="#d62728", s=15,
+                   label=f"worst {top_pct}% of points ({int(is_worst.sum())}/{is_worst.size})")
+        ax.set_xlim(X_LO, X_HI); ax.set_ylim(Y_LO, Y_HI); ax.set_aspect("equal")
+        ax.set_xticks([]); ax.set_yticks([])
+        for spine in ax.spines.values():
+            spine.set_visible(False)
+        ax.legend(loc="upper right", fontsize=8, framealpha=0.9)
+        ax.set_title(f"Worst {top_pct}% of points by time spent violating the "
+                     f"{rank_level_pct}%-of-FD-peak threshold", fontsize=9)
         fig.tight_layout()
         fig.savefig(out_path, dpi=150)
         plt.close(fig)
         print(f"Saved {out_path.name}")
 
     save_threshold_violation_map(figures_dir / "threshold_violation_map.png")
+
+    violation_maps_dir = figures_dir / "violation_maps"
+    violation_maps_dir.mkdir(exist_ok=True)
+    shutil.copy2(figures_dir / "threshold_violation_map.png",
+                 violation_maps_dir / "threshold_violation_map_5pct.png")
+    save_threshold_violation_map(violation_maps_dir / "threshold_violation_map_10pct.png", level_pct=10)
+    save_threshold_violation_map(violation_maps_dir / "threshold_violation_map_25pct.png", level_pct=25)
+    save_worst_points_map(violation_maps_dir / "worst_10pct_points_map.png",
+                          rank_level_pct=5, top_pct=10)
 
     if cache_only or not make_gifs:
         print("Skipping gif rendering (cache_only / make_gifs=False).")

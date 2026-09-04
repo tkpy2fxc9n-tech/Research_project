@@ -1,0 +1,8 @@
+p1_diag_error_nfwd (phase 1, H3) -- max rollout error vs N_FWD
+(curves truncated to t<=4.92 -- see T_CUTOFF comment in this script)
+
+N_FWD=1 (source: p1_nfwd1): final err_max=5.9923e-04  peak err_max=8.8710e-04
+N_FWD=2 (source: p1_nfwd2): final err_max=1.8258e-04  peak err_max=1.9416e-04
+N_FWD=3 (reference) (source: p2_pushforward): final err_max=3.8150e-04  peak err_max=3.8150e-04
+N_FWD=4 (source: p1_nfwd4): final err_max=7.3483e-04  peak err_max=8.9453e-04
+N_FWD=5 (source: p1_nfwd5): final err_max=3.2508e-03  peak err_max=5.3075e-03

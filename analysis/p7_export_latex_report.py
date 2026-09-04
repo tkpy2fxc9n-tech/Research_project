@@ -115,7 +115,6 @@ def main():
         return np.stack(cols, axis=1), [n for n in nodes if n not in FIXED_NODES]
 
     node_err, interior_node_order = _lattice_node_abs_error()  # (n_frames, n_interior_nodes)
-    err_max_curve_all = np.abs(err_U).max(axis=(1, 2))  # same as compute_metrics' t_div curve
 
     # --- worst single ROD (not node) by peak error, and the mean-error curve's
     # rise/plateau shape (quartile samples of the lattice-mean error curve) ---
@@ -134,13 +133,7 @@ def main():
                    else "roughly plateaued over the second half of the rollout")
 
     # --- T_5% / T_10% first-crossing times (T_10% == compute_metrics' t_div) ---
-    def first_crossing(level_pct):
-        level = level_pct / 100.0 * FD_PEAK
-        above = err_max_curve_all > level
-        return float(err_t[above][0]) if above.any() else None
-
-    t5 = first_crossing(5)
-    t10 = first_crossing(10)
+    t5, t10 = m.first_crossing_times(err_U, err_t, FD_PEAK)
 
     # --- per-node "ever exceeds 5%" flag + junction-proximity breakdown ---
     ever_exceeded_node = node_err.max(axis=0) > (VIOLATION_PCT / 100.0) * FD_PEAK  # (n_interior_nodes,)

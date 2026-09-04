@@ -1,0 +1,8 @@
+p7_complex_nopinn -- multi-wave rollout check (6 test trajectories)
+
+wave 0 (test idx 5): left=table right=table  E_short=8.2758e-03  t_div=0.15  amp_loss_pct=-20319795338.24
+wave 1 (test idx 27): left=table right=table  E_short=1.1620e-02  t_div=0.12  amp_loss_pct=-379731033733.00
+wave 2 (test idx 94): left=table right=table  E_short=2.3199e-02  t_div=0.15  amp_loss_pct=-670085566473.89
+wave 3 (test idx 100): left=table right=table  E_short=5.4367e-04  t_div=1.08  amp_loss_pct=-45912.89
+wave 4 (test idx 109): left=table right=table  E_short=1.1531e-02  t_div=0.15  amp_loss_pct=-14399921489.61
+wave 5 (test idx 124): left=table right=table  E_short=4.8472e-03  t_div=0.21  amp_loss_pct=-2946228947.57

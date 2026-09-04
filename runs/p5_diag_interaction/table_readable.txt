@@ -1,0 +1,13 @@
+Configuration                                   E_short          P_thr_5%                   E_max       T_max_5%      T_max_10%     T_mean_5%   T_mean_10%
+-------------------------------   ---------------------   ---------------   ---------------------   ------------   ------------   -----------   ----------
+M_BACK=2, {u} (reference)         1.73e-05 +/- 2.44e-05   53.9% +/- 21.9%   5.64e-04 +/- 4.62e-04   1.41s (100%)    3.00s (89%)   4.26s (35%)   4.80s (8%)
+M_BACK=3, {u}                     1.50e-05 +/- 2.43e-05   55.5% +/- 20.5%   5.84e-04 +/- 5.07e-04   1.98s (100%)    2.97s (85%)   4.35s (48%)   4.89s (7%)
+M_BACK=2, {u, u_dot}              1.39e-05 +/- 2.28e-05   52.2% +/- 20.3%   6.85e-04 +/- 4.88e-04   2.46s (100%)   4.08s (100%)   4.44s (62%)   4.84s (4%)
+M_BACK=3, {u, u_dot} (combined)                      --                --                      --             --             --            --           --
+
+E_short  : mean RMSE over the first 50 rollout steps (short-horizon error). Lower is better.
+P_thr_5%: % of rollout timesteps where error exceeds 5% of reference amplitude -- a BADNESS fraction. Lower is better.
+E_max    : peak max absolute error over the rollout. Lower is better.
+T_max_*  : first time the WORST-NODE error crosses the 5%/10% threshold. Higher is better (capped at the rollout horizon).
+T_mean_* : first time the BEAM-MEAN error crosses the 5%/10% threshold. Higher is better (capped at the rollout horizon).
+(mean +/- std / median (%reached) across N=99 held-out test trajectories)
