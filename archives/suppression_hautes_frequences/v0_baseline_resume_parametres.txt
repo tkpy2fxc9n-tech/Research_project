@@ -1,0 +1,141 @@
+=====================================================================
+ RESUME COMPLET -- v0_baseline
+ Fichier source : (Uxx, Ut)=>(delta_u) and ndt=5 et N et M_v0_baseline.py
+ Dossier        : /home/aph25/Code_suppression_hautes_frequences/
+=====================================================================
+
+---------------------------------------------------------------------
+1. PARAMETRES DE CONFIGURATION (valeurs codees dans le script)
+---------------------------------------------------------------------
+
+-- Physique --
+E (rigidite)              = 1
+rho (densite)              = 2
+L (longueur poutre)        = 1
+c = sqrt(E/rho)             = 0.7071
+t_end                       = 5 s
+
+-- Grille --
+Nt (pas de temps)          = 500        -> dt = 0.01
+Nx (noeuds physiques)      = 100        -> dx = 0.01010
+SS (marge fantome)         = 11         -> Ntot = 122
+  i_left = 11, i_right = 111 (noeuds physiques libres : [12:110])
+CFL = dt/dx * sqrt(E/rho)  = 0.7000  (stable, marge confortable sous 1)
+
+-- Fenetrage / rollout --
+ndt                         = 3
+M_BACK (niveaux passes)    = 3
+N_FWD (horizons predits)   = 3
+Features en entree         = 138   (= 3 lags x 23 voisins x 2 champs [u_dot, u_xx])
+Sorties                     = 3    (delta_u@1ndt, delta_u@2ndt, delta_u@3ndt)
+
+-- Dataset --
+N (grille amplitude x pulsation) = 6 x 6 = 36 simulations FD
+AMPLITUDES  = [0.005, 0.024, 0.043, 0.062, 0.081, 0.1]
+PULSATIONS  = [3.0, 4.4, 5.8, 7.2, 8.6, 10.0]
+Lignes totales              = 1 738 800  (48 300 lignes/simulation)
+Split train/val/test        = 60% / 20% / 20%  (seed=42)
+  train : 1 043 280 lignes
+  val   :   347 760 lignes
+  test  :   347 760 lignes
+Point de demo du rollout affiche : A=0.005, omega=3.0
+  (coin de la grille : amplitude ET frequence minimales -- pas un point central)
+
+-- Modele --
+Architecture                = MLP 138 -> 64 -> 32 -> 16 -> 3, activations GELU
+Nombre de parametres        = 11 555
+
+-- Entrainement --
+LEARNING_RATE                = 1e-3 (Adam)
+Scheduler                    = ReduceLROnPlateau (factor=0.5, patience=10)
+N_EPOCHS                     = 20
+BATCH_SIZE                   = 512
+NOISE_STD (bruit sur inputs) = 0.10
+
+-- Stabilisation du rollout (pushforward) --
+LAMBDA_PF (poids pushforward)     = 1.0
+N_PF_GROUPS (echantillons/batch)  = 8
+PF_WARMUP                          = 2 epoques (montee progressive de LAMBDA_PF)
+Profondeur du pushforward          = 1 SEUL SAUT (pas de multi-hop)
+PF_SAMPLES disponibles             = 17 064
+SMOOTH_ALPHA (lissage laplacien)   = 0.20
+
+IMPORTANT -- bug de coherence herite du script original (non corrige ici,
+volontairement, car v0_baseline reproduit l'original "tel quel") :
+la fonction reconstruct(), utilisee pour simuler l'auto-regression PENDANT
+l'entrainement pushforward, n'applique NI le lissage laplacien NI la
+correction du biais au repos -- alors que le VRAI rollout applique les deux
+a chaque bloc. Le reseau s'entraine donc a corriger une distribution
+d'erreurs differente de celle qu'il rencontre reellement en rollout.
+(C'est exactement le bug qu'on a trouve et corrige dans commun.py, pour
+Code_comparaison_des_inputs -- jamais applique ici.)
+
+-- Specifique a cette ablation (hautes frequences) --
+DIVERGENCE_THRESHOLD_FRAC   = 0.5   (seuil de divergence = 0.5 x A du run)
+COMPARISON_STEP              = 300  (pas utilise pour le spectre FFT comparatif)
+
+
+---------------------------------------------------------------------
+2. RESULTATS REELS MESURES (run du 19/07, outputs_baseline/)
+---------------------------------------------------------------------
+
+Temps d'entrainement          : 589.49 s (~9.8 min)
+Val minimale (loss normalisee): 4.889e-04
+
+Simulation reelle (FD)        : 0.006060 s
+Rollout predit (NN)           : 0.033161 s
+Ratio NN / FD                 : 5.47  (le NN est ~5.5x plus lent que le FD ici)
+
+--- Erreurs du rollout complet (Nt=500 pas, t in [0, 5s]) ---
+                    finale          max
+L2 relative       1.0000e+00     4.6628e+06
+Linf absolue      4.9858e-03     9.6405e+03
+RMSE              1.6702e-03     2.6346e+03   <-- pic a t=4.95s (step 495)
+sMAPE (%)         200.000        200.000
+
+--- Divergence detectee ---
+Seuil (0.5 x A = 0.5 x 0.005) = 2.5000e-03
+Premier depassement           : step 288, t = 2.880 s
+  (avant la fin du rollout : la moitie du rollout est encore "propre")
+
+--- Etat au pas de comparaison FFT (step 300, t=3.0s) ---
+RMSE a ce pas                 : 5.275e-03  (deja hors seuil de divergence)
+L2 relative a ce pas          : 3.099
+Energie haute frequence (>0.5 Nyquist) : 1.53%  (faible a CE pas precis)
+
+
+---------------------------------------------------------------------
+3. POURQUOI CA "A L'AIR" A PEU PRES CORRECT -- LECTURE HONNETE
+---------------------------------------------------------------------
+
+- Le RMSE "finale" (1.67e-3) et le val loss d'entrainement (4.9e-4) sont
+  petits -- si on ne regarde QUE ces deux nombres, ca ressemble a un run
+  reussi. Mais ce sont des chiffres trompeurs ici :
+
+- Le RMSE MAX (2634, au pas 495, t=4.95s -- presque la toute fin) montre
+  que le champ predit a explose a des valeurs absurdes AVANT de retomber
+  pres de zero en fin de trajectoire -- ce qui fait mecaniquement baisser
+  le RMSE "final" sans que le rollout ait ete stable. Meme mecanisme que
+  ce qu'on a observe sur methode_Ut_Uxx dans Code_comparaison_des_inputs
+  (L2 relative finale = 1.0000 exactement, dans les deux cas -- signe
+  que le champ predit s'est effondre a ~0, donc l'erreur finale ne
+  mesure plus que la norme du champ REEL, independamment du modele).
+
+- La divergence commence des t=2.88s (57% du rollout), pas a la toute
+  fin -- donc moins de la moitie du rollout est reellement fiable.
+
+- Structurellement, ce run cumule les memes fragilites que celles
+  identifiees ailleurs dans le projet :
+    * pushforward a 1 seul saut (jamais teste sur une longue chaine
+      pendant l'entrainement, alors que le vrai rollout en enchaine ~55)
+    * reconstruct() incoherente avec le vrai rollout (bug non corrige ici)
+    * Uxx comme entree (amplifie le bruit haute frequence via /dx^2 ~ x1e4)
+    * point de demo au coin extreme de la grille (A, omega minimaux)
+
+En resume : ce run n'a pas vraiment "mieux fonctionne" que les autres
+tentatives -- il a la meme signature d'echec (bonne loss d'entrainement,
+rollout qui explose puis s'effondre), juste avec un pic moins astronomique
+(2634 au lieu de millions/milliards) et une divergence qui demarre un peu
+plus tard (t=2.88s). Si l'impression de "ca marche a peu pres" vient d'un
+graphe ou d'un chiffre precis que je n'ai pas identifie ici, dis-le moi et
+je regarde ce point specifiquement.

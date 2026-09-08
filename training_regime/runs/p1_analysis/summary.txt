@@ -1,0 +1,14 @@
+p1_analysis (phase 1) -- max rollout error, pushforward vs full BPTT, 6 variants
+(last 2 samples excluded from stats below -- every regime fully damps to ~0 by then, see comment in this script)
+
+pushforward (rollout val) (source: Archives_runs/p1_pushforward_old): final err_max=3.8150e-04  peak err_max=3.8150e-04
+pushforward (loss val) (source: Archives_runs/p1_pushforward_val_train_same): final err_max=5.5630e-04  peak err_max=6.4582e-04
+pushforward, no PINN (rollout val) (source: Archives_runs/p1_pushforward_no_pinn): final err_max=3.8150e-04  peak err_max=3.8150e-04
+pushforward, no PINN (loss val) (source: p1_pushforward): final err_max=1.4864e-04  peak err_max=3.7265e-04
+full BPTT (rollout val) (source: Archives_runs/p1_bptt_old): final err_max=9.3774e-04  peak err_max=2.0616e-03
+full BPTT (loss val) (source: p1_bptt): final err_max=2.0806e-03  peak err_max=2.3148e-03
+
+[headline pair] pushforward (rollout val) error is lower than full BPTT (rollout val) by, averaged over the rollout: 4.09x (arithmetic mean of the per-sample ratio)
+  geometric mean 3.25x, median 2.99x, range 0.92x-19.46x over 162 samples
+  (6 of those samples have BPTT ahead instead, all before t=0.35 where both errors are still ~1e-8..1e-6, i.e. negligible;
+   1 further sample, t=0.06, is excluded as both curves are exactly 0 there)

@@ -1,0 +1,4 @@
+p9_diag_native_solver -- network error vs native coarse-solver error, both vs the true fine solution restricted to the coarse grid
+
+r = 2 (network: p9_coarse_r2, idx=3): final err_max network=3.3866e-04  final err_max native_solver=5.7225e-04  peak err_max network=5.1627e-04  peak err_max native_solver=7.9386e-04
+r = 4 (network: p9_coarse_r4, idx=3): final err_max network=7.1540e-04  final err_max native_solver=1.8415e-03  peak err_max network=1.2667e-03  peak err_max native_solver=2.2878e-03

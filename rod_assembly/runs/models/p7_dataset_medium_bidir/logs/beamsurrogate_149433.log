@@ -1,0 +1,72 @@
+=== beamsurrogate [run] run_id=p7_dataset_medium_bidir model=mlp regime=pushforward stabilizer=none dataset=medium_bidir features=['U'] ===
+[mem] start: 0.58 Go
+Loaded 2000 trajectories from /home/aph25/Code_GH/data/beam_dataset_medium_bidir.h5
+Split distribution (from dataset):
+  train : 1789 simulations (89.5 %)
+  val   :   95 simulations (4.8 %)
+  test  :  116 simulations (5.8 %)
+[mem] after load_hdf5_dataset: 28.96 Go
+[mem] after compute_norm_stats: 28.96 Go
+MLP(
+  (net): Sequential(
+    (0): Linear(in_features=69, out_features=512, bias=True)
+    (1): GELU(approximate='none')
+    (2): Linear(in_features=512, out_features=256, bias=True)
+    (3): GELU(approximate='none')
+    (4): Linear(in_features=256, out_features=64, bias=True)
+    (5): GELU(approximate='none')
+    (6): Linear(in_features=64, out_features=2, bias=True)
+  )
+)
+Parameters: 183,746
+[mem] after make_dataloaders: 54.36 Go
+[mem] after trimming df to test split: 28.16 Go
+Epoch    1/100  --  data: 0.0438  |  pushforward: 1.3897  |  physics: 0.1818  |  L2 rel error (val): 1.8532
+Epoch    2/100  --  data: 0.0279  |  pushforward: 0.9042  |  physics: 0.0727  |  L2 rel error (val): 0.9408
+Epoch    3/100  --  data: 0.0338  |  pushforward: 1.0006  |  physics: 0.0738  |  L2 rel error (val): 0.8995
+Epoch    4/100  --  data: 0.0200  |  pushforward: 0.5420  |  physics: 0.0513  |  L2 rel error (val): 0.8504
+Epoch    5/100  --  data: 0.0184  |  pushforward: 0.4774  |  physics: 0.0468  |  L2 rel error (val): 0.8591
+Epoch    6/100  --  data: 0.0161  |  pushforward: 0.4157  |  physics: 0.0422  |  L2 rel error (val): 0.8312
+Epoch    7/100  --  data: 0.0119  |  pushforward: 0.2727  |  physics: 0.0323  |  L2 rel error (val): 0.8352
+Epoch    8/100  --  data: 0.0119  |  pushforward: 0.2827  |  physics: 0.0313  |  L2 rel error (val): 0.8354
+Epoch    9/100  --  data: 0.0097  |  pushforward: 0.2111  |  physics: 0.0275  |  L2 rel error (val): 0.8376
+Epoch   10/100  --  data: 0.0099  |  pushforward: 0.2215  |  physics: 0.0276  |  L2 rel error (val): 0.8293
+Epoch   11/100  --  data: 0.0093  |  pushforward: 0.1934  |  physics: 0.0256  |  L2 rel error (val): 0.8355
+Epoch   12/100  --  data: 0.0082  |  pushforward: 0.1735  |  physics: 0.0231  |  L2 rel error (val): 0.8726
+Epoch   13/100  --  data: 0.0083  |  pushforward: 0.1704  |  physics: 0.0237  |  L2 rel error (val): 0.8920
+Epoch   14/100  --  data: 0.0078  |  pushforward: 0.1597  |  physics: 0.0226  |  L2 rel error (val): 0.8325
+Epoch   15/100  --  data: 0.0085  |  pushforward: 0.1815  |  physics: 0.0241  |  L2 rel error (val): 0.8838
+Epoch   16/100  --  data: 0.0073  |  pushforward: 0.1476  |  physics: 0.0210  |  L2 rel error (val): 0.8537
+Epoch   17/100  --  data: 0.0072  |  pushforward: 0.1437  |  physics: 0.0212  |  L2 rel error (val): 0.8802
+Epoch   18/100  --  data: 0.0069  |  pushforward: 0.1376  |  physics: 0.0199  |  L2 rel error (val): 0.8298
+Epoch   19/100  --  data: 0.0062  |  pushforward: 0.1264  |  physics: 0.0191  |  L2 rel error (val): 0.8296
+Epoch   20/100  --  data: 0.0066  |  pushforward: 0.1273  |  physics: 0.0199  |  L2 rel error (val): 0.8416
+Epoch   21/100  --  data: 0.0065  |  pushforward: 0.1293  |  physics: 0.0196  |  L2 rel error (val): 0.8318
+Epoch   22/100  --  data: 0.0067  |  pushforward: 0.1315  |  physics: 0.0191  |  L2 rel error (val): 0.8254
+Epoch   23/100  --  data: 0.0058  |  pushforward: 0.1138  |  physics: 0.0178  |  L2 rel error (val): 0.8272
+Epoch   24/100  --  data: 0.0059  |  pushforward: 0.1127  |  physics: 0.0184  |  L2 rel error (val): 1.7054
+Epoch   25/100  --  data: 0.0059  |  pushforward: 0.1096  |  physics: 0.0180  |  L2 rel error (val): 0.8296
+Epoch   26/100  --  data: 0.0059  |  pushforward: 0.1126  |  physics: 0.0175  |  L2 rel error (val): 0.8255
+Epoch   27/100  --  data: 0.0062  |  pushforward: 0.1280  |  physics: 0.0191  |  L2 rel error (val): 0.8242
+Epoch   28/100  --  data: 0.0061  |  pushforward: 0.1277  |  physics: 0.0195  |  L2 rel error (val): 0.8294
+Epoch   29/100  --  data: 0.0056  |  pushforward: 0.1094  |  physics: 0.0174  |  L2 rel error (val): 0.8267
+Epoch   30/100  --  data: 0.0067  |  pushforward: 0.1334  |  physics: 0.0195  |  L2 rel error (val): 0.8438
+Epoch   31/100  --  data: 0.0052  |  pushforward: 0.0939  |  physics: 0.0166  |  L2 rel error (val): 0.8292
+Epoch   32/100  --  data: 0.0056  |  pushforward: 0.1062  |  physics: 0.0169  |  L2 rel error (val): 0.9553
+Epoch   33/100  --  data: 0.0053  |  pushforward: 0.0940  |  physics: 0.0159  |  L2 rel error (val): 0.8382
+Epoch   34/100  --  data: 0.0047  |  pushforward: 0.0860  |  physics: 0.0156  |  L2 rel error (val): 0.8390
+Epoch   35/100  --  data: 0.0046  |  pushforward: 0.0813  |  physics: 0.0146  |  L2 rel error (val): 0.8273
+Epoch   36/100  --  data: 0.0049  |  pushforward: 0.0877  |  physics: 0.0157  |  L2 rel error (val): 0.8293
+Epoch   37/100  --  data: 0.0049  |  pushforward: 0.0844  |  physics: 0.0167  |  L2 rel error (val): 0.8270
+Epoch   38/100  --  data: 0.0043  |  pushforward: 0.0739  |  physics: 0.0138  |  L2 rel error (val): 30.4374
+Epoch   39/100  --  data: 0.0050  |  pushforward: 0.0910  |  physics: 0.0154  |  L2 rel error (val): 0.8251
+Epoch   40/100  --  data: 0.0040  |  pushforward: 0.0679  |  physics: 0.0131  |  L2 rel error (val): 0.8310
+Epoch   41/100  --  data: 0.0053  |  pushforward: 0.0945  |  physics: 0.0187  |  L2 rel error (val): 0.8348
+Epoch   42/100  --  data: 0.0053  |  pushforward: 0.1025  |  physics: 0.0186  |  L2 rel error (val): 0.8508
+Early stopping at epoch 42: val loss hasn't improved for 15 epochs (best=0.824193).
+Best model reloaded -- minimum L2 rel error (val): 0.824193
+[mem] after training: 28.41 Go
+[mem] after evaluate_one_step: 28.52 Go
+[mem] after rollout + benchmark: 28.52 Go
+Done -- outputs in /home/aph25/Code_GH/runs/p7_dataset_medium_bidir
+RUN DONE: configs/runs/p7_dataset_medium_bidir.yaml

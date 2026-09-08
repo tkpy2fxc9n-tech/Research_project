@@ -1,0 +1,12 @@
+Regime            T_max_5%      T_max_10%      T_mean_5%    T_mean_10%                   E_max           t_E_max          P_thr_5%   t_train
+-----------   ------------   ------------   ------------   -----------   ---------------------   ---------------   ---------------   -------
+Pushforward   1.14s (100%)    2.94s (93%)    4.30s (40%)    4.70s (8%)   5.49e-04 +/- 3.16e-04   4.12s +/- 1.00s   56.7% +/- 21.5%     4.39h
+TBPTT         0.69s (100%)   0.78s (100%)   2.10s (100%)   2.82s (97%)   2.23e-03 +/- 8.97e-04   3.97s +/- 0.57s    87.2% +/- 6.6%     4.49h
+
+P_thr_5%: % of rollout timesteps where error exceeds 5% of reference amplitude -- a BADNESS fraction. Lower is better.
+E_max    : peak max absolute error over the rollout. Lower is better.
+t_E_max  : time at which E_max occurs.
+T_max_*  : first time the WORST-NODE error crosses the 5%/10% threshold. Higher is better (capped at the rollout horizon).
+T_mean_* : first time the BEAM-MEAN error crosses the 5%/10% threshold. Higher is better (capped at the rollout horizon).
+t_train : total wall-clock training time for that run.
+(mean +/- std / median (%reached) across N=99 held-out test trajectories)

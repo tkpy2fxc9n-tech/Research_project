@@ -1,0 +1,25 @@
+# Exact package versions of the environment that produced everything under
+# runs/ -- the venv ~/Desktop/wave_env on the "spitfire" workstation,
+# Python 3.13.5.
+#
+# pyproject.toml declares the same dependencies unpinned (so `pip install -e .`
+# always works); this file pins the versions actually used, for exact
+# reproduction of the reported numbers.
+#
+#   python3 -m venv .venv && source .venv/bin/activate
+#   pip install -r requirements.txt
+#   pip install -e .
+#
+# NOTE ON TORCH -- the machine used the CUDA 13.0 build (torch 2.13.0+cu130).
+# The pin below is the plain version, which resolves to the CPU wheel on
+# macOS (Apple Silicon: MPS backend) and to the default CUDA wheel on Linux.
+# Everything in this project runs on CPU; the GPU only makes training faster.
+# To force the CUDA 13.0 build explicitly:
+#   pip install torch==2.13.0 --index-url https://download.pytorch.org/whl/cu130
+
+h5py==3.16.0
+matplotlib==3.11.0
+numpy==2.5.1
+pandas==3.0.3
+PyYAML==6.0.3
+torch==2.13.0

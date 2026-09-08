@@ -1,0 +1,6 @@
+p2_diag_error_features -- max rollout error over time vs input features
+
+features={U} (source: p2_reference): final err_max=1.4864e-04  peak err_max=3.7265e-04
+features={U,Ut} (source: p2_feat_u_ut): final err_max=8.3975e-04  peak err_max=8.4575e-04
+features={Ut,Uxx} (source: p2_feat_ut_uxx): final err_max=3.3969e-04  peak err_max=3.3969e-04
+features={U,Ut,Uxx} (source: p2_feat_all): final err_max=4.7350e-04  peak err_max=4.9763e-04

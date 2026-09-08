@@ -1,0 +1,47 @@
+=== beamsurrogate [run] run_id=p2_nfwd2 model=mlp regime=pushforward stabilizer=none dataset=simple features=['U'] ===
+[mem] start: 0.58 Go
+Loaded 2000 trajectories from /home/aph25/Code_GH/data/beam_dataset_simple.h5
+Split distribution (from dataset):
+  train : 1817 simulations (90.8 %)
+  val   :   84 simulations (4.2 %)
+  test  :   99 simulations (5.0 %)
+[mem] after load_hdf5_dataset: 20.35 Go
+[mem] after compute_norm_stats: 20.35 Go
+MLP(
+  (net): Sequential(
+    (0): Linear(in_features=46, out_features=512, bias=True)
+    (1): GELU(approximate='none')
+    (2): Linear(in_features=512, out_features=256, bias=True)
+    (3): GELU(approximate='none')
+    (4): Linear(in_features=256, out_features=64, bias=True)
+    (5): GELU(approximate='none')
+    (6): Linear(in_features=64, out_features=2, bias=True)
+  )
+)
+Parameters: 171,970
+[mem] after make_dataloaders: 37.81 Go
+[mem] after trimming df to test split: 19.56 Go
+Epoch    1/100  --  data: 0.0154  |  pushforward: 0.4123  |  physics: 0.0000  |  comparable loss (val): 0.0267
+Epoch    2/100  --  data: 0.0061  |  pushforward: 0.1723  |  physics: 0.0000  |  comparable loss (val): 0.0084
+Epoch    3/100  --  data: 0.0061  |  pushforward: 0.1549  |  physics: 0.0000  |  comparable loss (val): 2.8649
+Epoch    4/100  --  data: 0.0061  |  pushforward: 0.1358  |  physics: 0.0000  |  comparable loss (val): 0.1605
+Epoch    5/100  --  data: 0.0058  |  pushforward: 0.1242  |  physics: 0.0000  |  comparable loss (val): 0.1496
+Epoch    6/100  --  data: 0.0050  |  pushforward: 0.1082  |  physics: 0.0000  |  comparable loss (val): 0.2516
+Epoch    7/100  --  data: 0.0046  |  pushforward: 0.0950  |  physics: 0.0000  |  comparable loss (val): 0.0233
+Epoch    8/100  --  data: 0.0042  |  pushforward: 0.0862  |  physics: 0.0000  |  comparable loss (val): 0.0216
+Epoch    9/100  --  data: 0.0038  |  pushforward: 0.0786  |  physics: 0.0000  |  comparable loss (val): 0.0272
+Epoch   10/100  --  data: 0.0037  |  pushforward: 0.0758  |  physics: 0.0000  |  comparable loss (val): 0.0636
+Epoch   11/100  --  data: 0.0034  |  pushforward: 0.0675  |  physics: 0.0000  |  comparable loss (val): 0.2024
+Epoch   12/100  --  data: 0.0035  |  pushforward: 0.0680  |  physics: 0.0000  |  comparable loss (val): 0.1132
+Epoch   13/100  --  data: 0.0031  |  pushforward: 0.0588  |  physics: 0.0000  |  comparable loss (val): 0.0354
+Epoch   14/100  --  data: 0.0030  |  pushforward: 0.0567  |  physics: 0.0000  |  comparable loss (val): 0.0773
+Epoch   15/100  --  data: 0.0031  |  pushforward: 0.0587  |  physics: 0.0000  |  comparable loss (val): 0.0729
+Epoch   16/100  --  data: 0.0030  |  pushforward: 0.0558  |  physics: 0.0000  |  comparable loss (val): 0.0147
+Epoch   17/100  --  data: 0.0027  |  pushforward: 0.0505  |  physics: 0.0000  |  comparable loss (val): 0.0350
+Early stopping at epoch 17: val loss hasn't improved for 15 epochs (best=0.008413).
+Best model reloaded -- minimum comparable loss (val): 0.008413
+[mem] after training: 19.79 Go
+[mem] after evaluate_one_step: 19.89 Go
+[mem] after rollout + benchmark: 19.89 Go
+Done -- outputs in runs/p2/p2_nfwd2
+RUN DONE: runs/p2/p2_nfwd2/config.yaml

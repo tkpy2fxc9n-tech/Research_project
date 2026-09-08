@@ -1,0 +1,7 @@
+p2_diag_error_nfwd -- max rollout error over time vs N_FWD
+
+N_FWD=1 (source: p2_nfwd1): final err_max=2.7512e-04  peak err_max=3.7615e-04
+N_FWD=2 (source: p2_nfwd2): final err_max=6.0386e-04  peak err_max=6.0386e-04
+N_FWD=3 (reference) (source: p2_reference): final err_max=1.4864e-04  peak err_max=3.7265e-04
+N_FWD=4 (source: p2_nfwd4): final err_max=6.4732e-04  peak err_max=7.4311e-04
+N_FWD=5 (source: p2_nfwd5): final err_max=5.3470e-03  peak err_max=5.3470e-03

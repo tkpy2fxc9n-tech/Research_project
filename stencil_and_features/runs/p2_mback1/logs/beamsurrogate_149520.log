@@ -1,0 +1,50 @@
+=== beamsurrogate [run] run_id=p2_mback1 model=mlp regime=pushforward stabilizer=none dataset=simple features=['U'] ===
+[mem] start: 0.58 Go
+Loaded 2000 trajectories from /home/aph25/Code_GH/data/beam_dataset_simple.h5
+Split distribution (from dataset):
+  train : 1817 simulations (90.8 %)
+  val   :   84 simulations (4.2 %)
+  test  :   99 simulations (5.0 %)
+[mem] after load_hdf5_dataset: 11.94 Go
+[mem] after compute_norm_stats: 11.93 Go
+MLP(
+  (net): Sequential(
+    (0): Linear(in_features=23, out_features=512, bias=True)
+    (1): GELU(approximate='none')
+    (2): Linear(in_features=512, out_features=256, bias=True)
+    (3): GELU(approximate='none')
+    (4): Linear(in_features=256, out_features=64, bias=True)
+    (5): GELU(approximate='none')
+    (6): Linear(in_features=64, out_features=3, bias=True)
+  )
+)
+Parameters: 160,259
+[mem] after make_dataloaders: 21.41 Go
+[mem] after trimming df to test split: 11.13 Go
+Epoch    1/100  --  data: 0.1229  |  pushforward: 3.2743  |  physics: 0.0000  |  comparable loss (val): 0.3574
+Epoch    2/100  --  data: 0.0925  |  pushforward: 2.8898  |  physics: 0.0000  |  comparable loss (val): 0.2629
+Epoch    3/100  --  data: 0.0920  |  pushforward: 2.8202  |  physics: 0.0000  |  comparable loss (val): 0.2334
+Epoch    4/100  --  data: 0.0931  |  pushforward: 2.7489  |  physics: 0.0000  |  comparable loss (val): 3.0255
+Epoch    5/100  --  data: 0.0955  |  pushforward: 2.7941  |  physics: 0.0000  |  comparable loss (val): 0.1769
+Epoch    6/100  --  data: 0.0942  |  pushforward: 2.6802  |  physics: 0.0000  |  comparable loss (val): 1.7315
+Epoch    7/100  --  data: 0.0927  |  pushforward: 2.6178  |  physics: 0.0000  |  comparable loss (val): 1.4822
+Epoch    8/100  --  data: 0.0907  |  pushforward: 2.5530  |  physics: 0.0000  |  comparable loss (val): 0.5663
+Epoch    9/100  --  data: 0.0884  |  pushforward: 2.5614  |  physics: 0.0000  |  comparable loss (val): 5.1595
+Epoch   10/100  --  data: 0.0867  |  pushforward: 2.4984  |  physics: 0.0000  |  comparable loss (val): 8.9706
+Epoch   11/100  --  data: 0.0859  |  pushforward: 2.4467  |  physics: 0.0000  |  comparable loss (val): 0.4431
+Epoch   12/100  --  data: 0.0840  |  pushforward: 2.4168  |  physics: 0.0000  |  comparable loss (val): 0.6452
+Epoch   13/100  --  data: 0.0827  |  pushforward: 2.3910  |  physics: 0.0000  |  comparable loss (val): 0.4189
+Epoch   14/100  --  data: 0.0816  |  pushforward: 2.3826  |  physics: 0.0000  |  comparable loss (val): 0.3158
+Epoch   15/100  --  data: 0.0804  |  pushforward: 2.3640  |  physics: 0.0000  |  comparable loss (val): 2.0794
+Epoch   16/100  --  data: 0.0799  |  pushforward: 2.3081  |  physics: 0.0000  |  comparable loss (val): 4.1588
+Epoch   17/100  --  data: 0.0787  |  pushforward: 2.3153  |  physics: 0.0000  |  comparable loss (val): 4.4534
+Epoch   18/100  --  data: 0.0781  |  pushforward: 2.3015  |  physics: 0.0000  |  comparable loss (val): 2.1260
+Epoch   19/100  --  data: 0.0773  |  pushforward: 2.2503  |  physics: 0.0000  |  comparable loss (val): 0.1785
+Epoch   20/100  --  data: 0.0767  |  pushforward: 2.2502  |  physics: 0.0000  |  comparable loss (val): 0.2369
+Early stopping at epoch 20: val loss hasn't improved for 15 epochs (best=0.176892).
+Best model reloaded -- minimum comparable loss (val): 0.176892
+[mem] after training: 11.48 Go
+[mem] after evaluate_one_step: 11.59 Go
+[mem] after rollout + benchmark: 11.59 Go
+Done -- outputs in runs/p2/p2_mback1
+RUN DONE: runs/p2/p2_mback1/config.yaml

@@ -1,0 +1,48 @@
+=== beamsurrogate [run] run_id=p6_dataset_complex model=mlp regime=pushforward stabilizer=none dataset=complex features=['U'] ===
+[mem] start: 0.58 Go
+Loaded 2000 trajectories from /home/aph25/Code_GH/data/beam_dataset_complex.h5
+Split distribution (from dataset):
+  train : 1811 simulations (90.5 %)
+  val   :   92 simulations (4.6 %)
+  test  :   97 simulations (4.8 %)
+[mem] after load_hdf5_dataset: 28.96 Go
+[mem] after compute_norm_stats: 28.97 Go
+MLP(
+  (net): Sequential(
+    (0): Linear(in_features=69, out_features=256, bias=True)
+    (1): GELU(approximate='none')
+    (2): Linear(in_features=256, out_features=128, bias=True)
+    (3): GELU(approximate='none')
+    (4): Linear(in_features=128, out_features=32, bias=True)
+    (5): GELU(approximate='none')
+    (6): Linear(in_features=32, out_features=2, bias=True)
+  )
+)
+Parameters: 55,010
+[mem] after make_dataloaders: 54.62 Go
+[mem] after trimming df to test split: 28.16 Go
+Epoch    1/100  --  data: 0.1099  |  pushforward: 1.9643  |  physics: 3.1127  |  comparable loss (val): 0.2153
+Epoch    2/100  --  data: 0.0835  |  pushforward: 1.4449  |  physics: 2.6625  |  comparable loss (val): 0.3131
+Epoch    3/100  --  data: 0.0653  |  pushforward: 0.9999  |  physics: 2.5425  |  comparable loss (val): 0.1206
+Epoch    4/100  --  data: 0.0628  |  pushforward: 0.9079  |  physics: 2.5834  |  comparable loss (val): 0.7442
+Epoch    5/100  --  data: 0.0565  |  pushforward: 0.7269  |  physics: 2.4843  |  comparable loss (val): 2.0345
+Epoch    6/100  --  data: 0.0514  |  pushforward: 0.6285  |  physics: 2.4851  |  comparable loss (val): 0.2674
+Epoch    7/100  --  data: 0.0452  |  pushforward: 0.5376  |  physics: 2.4306  |  comparable loss (val): 0.1770
+Epoch    8/100  --  data: 0.0429  |  pushforward: 0.5088  |  physics: 2.4772  |  comparable loss (val): 0.2104
+Epoch    9/100  --  data: 0.0404  |  pushforward: 0.4917  |  physics: 2.4873  |  comparable loss (val): 0.1507
+Epoch   10/100  --  data: 0.0370  |  pushforward: 0.4383  |  physics: 2.4866  |  comparable loss (val): 0.1346
+Epoch   11/100  --  data: 0.0377  |  pushforward: 0.4832  |  physics: 2.4263  |  comparable loss (val): 0.3235
+Epoch   12/100  --  data: 0.0341  |  pushforward: 0.4090  |  physics: 2.3948  |  comparable loss (val): 0.1403
+Epoch   13/100  --  data: 0.0322  |  pushforward: 0.3649  |  physics: 2.3818  |  comparable loss (val): 0.4582
+Epoch   14/100  --  data: 0.0341  |  pushforward: 0.3960  |  physics: 2.3729  |  comparable loss (val): 0.3551
+Epoch   15/100  --  data: 0.0289  |  pushforward: 0.3448  |  physics: 2.3194  |  comparable loss (val): 0.1648
+Epoch   16/100  --  data: 0.0320  |  pushforward: 0.3980  |  physics: 2.3636  |  comparable loss (val): 0.1415
+Epoch   17/100  --  data: 0.0272  |  pushforward: 0.3358  |  physics: 2.3828  |  comparable loss (val): 0.1443
+Epoch   18/100  --  data: 0.0280  |  pushforward: 0.3496  |  physics: 2.4399  |  comparable loss (val): 1.1906
+Early stopping at epoch 18: val loss hasn't improved for 15 epochs (best=0.120594).
+Best model reloaded -- minimum comparable loss (val): 0.120594
+[mem] after training: 28.56 Go
+[mem] after evaluate_one_step: 28.64 Go
+[mem] after rollout + benchmark: 28.64 Go
+Done -- outputs in runs/p6_performance_different_datasets/p6_dataset_complex
+RUN DONE: runs/p6_performance_different_datasets/p6_dataset_complex/config.yaml

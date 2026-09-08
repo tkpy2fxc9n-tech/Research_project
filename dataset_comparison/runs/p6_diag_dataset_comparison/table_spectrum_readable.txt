@@ -1,0 +1,15 @@
+Wave family           f_centroid (Hz)
+-------------------   ---------------
+Gaussian                       0.3414
+Chirp                          0.0983
+Tanh shock                     0.1220
+Filtered rand. walk            0.1467
+Sawtooth                       0.2164
+Sinusoids                      0.1004
+
+Gaussian               f_centroid = 0.3414 Hz (std across 20 draws: 0.6245 Hz)
+Chirp                  f_centroid = 0.0983 Hz (std across 20 draws: 0.0193 Hz)
+Tanh shock             f_centroid = 0.1220 Hz (std across 20 draws: 0.0255 Hz)
+Filtered rand. walk    f_centroid = 0.1467 Hz (std across 20 draws: 0.0740 Hz)
+Sawtooth               f_centroid = 0.2164 Hz (std across 20 draws: 0.4080 Hz)
+Sinusoids              f_centroid = 0.1004 Hz (std across 20 draws: 0.0434 Hz)

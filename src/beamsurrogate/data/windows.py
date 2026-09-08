@@ -1,5 +1,5 @@
 # Feature windowing (stencil x lag -> flat feature vector). Shared by
-# dataset generation, training, and rollout -- H4 (which of U/Ut/Uxx feed
+# dataset generation, training, and rollout -- phase 2 (which of U/Ut/Uxx feed
 # the network) is just the `input_fields` list passed through here, not a
 # separate code path per feature set.
 from __future__ import annotations

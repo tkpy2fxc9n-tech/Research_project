@@ -1,0 +1,12 @@
+p3_pinn_comparative -- max rollout error vs LAMBDA_PHYSICS
+
+PINN=0 (source: p3_pinn_0): final err_max=2.6260e-04  peak err_max=3.9914e-04
+PINN=0.001 (source: p3_pinn_0.001): final err_max=4.4938e-04  peak err_max=6.8137e-04
+PINN=0.01 (source: p3_pinn_0.01): final err_max=2.4099e-04  peak err_max=3.0118e-04
+PINN=0.1 (source: p3_pinn_0.1): final err_max=1.6352e-04  peak err_max=2.5020e-04
+
+Integrated mechanical energy, int E(t) dt over the rollout window (N*s/m):
+  FD reference: 3.428202e-04
+  lambda=0:     3.191030e-04
+  lambda=0.01:  3.721855e-04
+  lambda=0.1:   3.476870e-04

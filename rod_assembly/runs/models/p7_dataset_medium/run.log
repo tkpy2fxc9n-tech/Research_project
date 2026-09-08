@@ -1,0 +1,11 @@
+Lattice: 43 nodes, 94 rods (9 fixed, 3 driven).
+Free-node degrees present: [1, 2, 3, 5, 6]
+Reusing cached frames from p17_dataset_medium_assembly_rectangular_frames.npz (delete it to recompute).
+Peak |u| over the whole lattice -- FD=0.00664  NN=0.00846  ratio NN/FD=1.274
+Error field: 330 frames, max |FD-NN| = 0.00922
+Saved p17_dataset_medium_assembly_rectangular_fd_3d.gif
+Saved p17_dataset_medium_assembly_rectangular_nn_3d.gif
+Saved p17_dataset_medium_assembly_rectangular_err_3d.gif
+Saved p17_dataset_medium_assembly_rectangular_fd_2d.gif
+Saved p17_dataset_medium_assembly_rectangular_nn_2d.gif
+Saved p17_dataset_medium_assembly_rectangular_err_2d.gif

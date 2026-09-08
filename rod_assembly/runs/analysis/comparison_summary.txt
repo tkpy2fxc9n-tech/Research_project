@@ -1,0 +1,11 @@
+p17 rectangular assembly (94-rod lattice) -- model comparison
+Ranked by relative mean |FD-NN| error over the whole lattice (lower is better).
+
+rank model                                         rel_mean%  rel_max%  ratio NN/FD  NN time (s)  NN/FD speed
+
+EXCLUDED (diverged or missing cache):
+  p7_dataset_medium_pinn_0.01                   no cache at /Users/aloishenom/Research_Project/Research_project_config-driven-campaign/rod_assembly/runs/models/p7_dataset_medium_pinn_0.01/p7_dataset_medium_pinn_0.01_frames.npz
+  p7_dataset_medium                             no cache at /Users/aloishenom/Research_Project/Research_project_config-driven-campaign/rod_assembly/runs/models/p7_dataset_medium/p7_dataset_medium_frames.npz
+  p7_dataset_medium_arch_256_128_32_pinn_0.01   no cache at /Users/aloishenom/Research_Project/Research_project_config-driven-campaign/rod_assembly/runs/models/p7_dataset_medium_arch_256_128_32_pinn_0.01/p7_dataset_medium_arch_256_128_32_pinn_0.01_frames.npz
+  p7_dataset_medium_bidir                       no cache at /Users/aloishenom/Research_Project/Research_project_config-driven-campaign/rod_assembly/runs/models/p7_dataset_medium_bidir/p7_dataset_medium_bidir_frames.npz
+  p7_dataset_medium_ut                          no cache at /Users/aloishenom/Research_Project/Research_project_config-driven-campaign/rod_assembly/runs/models/p7_dataset_medium_ut/p7_dataset_medium_ut_frames.npz

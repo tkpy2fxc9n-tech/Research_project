@@ -1,0 +1,87 @@
+Area under the curve -- error_max_pushforward_vs_fbptt.png
+======================================================================
+
+Curves: err_max (max absolute error along the beam) vs time, taken from
+the 'curves' block of runs/p1_pushforward/metrics.json (Pushforward) and
+runs/p1_bptt/metrics.json (TBPTT) -- the exact arrays the figure plots.
+Composite trapezoidal rule on the shared uniform grid (dt = 0.03 s), with
+the last 2 samples dropped exactly as the figure drops them.
+Integration window: t = 0.06 .. 4.86 s  (161 samples, span 4.80 s)
+
+----------------------------------------------------------------------
+1. LINEAR AREA   int e(t) dt        <- the integral in the usual sense
+----------------------------------------------------------------------
+   units: (error units) x s
+
+   Pushforward  5.726291e-04     time-average e = 1.192977e-04
+   TBPTT        4.731336e-03     time-average e = 9.856951e-04
+
+   Ratio    TBPTT / Pushforward = 8.262 x
+   Absolute difference          = 4.158707e-03
+
+   On a linear scale the integral is dominated by the late-time plateau
+   (t > 1 s), where both errors are largest. The early ramp (1e-8..1e-5)
+   contributes essentially nothing to it.
+
+----------------------------------------------------------------------
+2. LOG AREA   int log10(e(t)) dt    <- the area as it LOOKS on this figure
+----------------------------------------------------------------------
+   The y-axis is logarithmic, so the visible area between a curve and the
+   bottom of the plot is not metric 1. This is that area. Values are
+   negative because e < 1 over the whole rollout.
+   Window t = 0.09 .. 4.86 s (span 4.77 s): the t = 0.06 s sample is excluded
+   because err_max is exactly 0 there and log10(0) is undefined.
+
+   Pushforward   -19.7132     mean log10 e = -4.1327  ->  geometric mean e = 7.3665e-05
+   TBPTT         -15.6546     mean log10 e = -3.2819  ->  geometric mean e = 5.2254e-04
+
+   Gap in log area (TBPTT - Pushforward) = +4.0586
+   Mean vertical gap on the figure       = 0.8509 decade
+   -> TBPTT's error is on average 7.09 x higher than Pushforward's.
+
+----------------------------------------------------------------------
+3. CROSS-CHECK against the pointwise ratio
+----------------------------------------------------------------------
+   Same pair, TBPTT/Pushforward computed timestep by timestep (this is
+   what error_max_ratio_fbptt_over_pushforward.png plots), over the same
+   160 samples:
+
+     arithmetic mean 8.387 x   geometric mean 7.062 x   median 8.034 x
+     range 1.029 x .. 22.093 x   (Pushforward is ahead at every timestep)
+
+   The geometric mean (7.06 x) matches the log-area result (7.09 x) to within
+   rounding -- they are the same quantity, the log area just weights the
+   endpoints by half (trapezoid rule). That agreement is the sanity check
+   that the areas above are right.
+
+----------------------------------------------------------------------
+WHICH NUMBER TO QUOTE
+----------------------------------------------------------------------
+   Linear area (metric 1): 'total error accumulated over the rollout' ->
+   TBPTT is 8.3 x worse. Driven by the plateau, so it is really a
+   statement about late-time behaviour.
+
+   Log area (metric 2): 'typical multiplicative gap, every decade counted
+   equally' -> TBPTT is 7.1 x worse. More robust, less sensitive to the
+   few worst timesteps.
+
+   Both agree in direction and are close in magnitude (8.3 x vs 7.1 x).
+
+   CAUTION -- do not mix these with summary.txt's numbers:
+
+   (a) runs/p1_analysis/summary.txt quotes '4.09x mean / 3.25x geometric
+       mean' for its HEADLINE PAIR, which is a different pair of runs:
+       the archived 'rollout val' ones (Archives_runs/p1_pushforward_old
+       vs Archives_runs/p1_bptt_old). This figure plots the 'loss val'
+       pair -- p1_pushforward (which summary.txt lists as 'pushforward,
+       no PINN (loss val)') and p1_bptt -- for which the gap is larger.
+
+   (b) summary.txt is also stale for p1_bptt: it was written 2026-08-20,
+       but runs/p1_bptt/metrics.json was regenerated 2026-08-23. Its
+       'full BPTT (loss val)' row says final err_max = 2.0806e-03 /
+       peak = 2.3148e-03, whereas the current file (and this figure)
+       gives final = 1.3847e-03 / peak = 2.5221e-03. The p1_pushforward
+       row still matches. The areas above use the current metrics.json,
+       i.e. the same data the figure was drawn from -- regenerate
+       summary.txt before quoting it alongside these.
+

@@ -9,6 +9,51 @@ outputs/
 # beamsurrogate campaign layout
 *.egg-info/
 /data/
-/runs/
 /figures/
+/logs/
 
+# runs/: the heavy outputs are machine-local and fully regenerable, but the
+# small artifacts that make the results readable *without* re-running
+# anything are versioned: figures (*.png), metrics (*.json/*.csv/*.txt),
+# resolved configs (*.yaml) and trained weights (*.pth, ~50 MB total).
+# Deliberately excluded: *.npz raw prediction arrays (~5.3 GB) and *.gif
+# animations (~400 MB) -- both re-created by re-running the analysis scripts.
+# Note: the `!` rules below must stay AFTER the global `*.pth` rule above,
+# since the last matching pattern wins.
+**/runs/**
+!**/runs/**/
+!**/runs/**/*.png
+!**/runs/**/*.json
+!**/runs/**/*.csv
+!**/runs/**/*.txt
+!**/runs/**/*.yaml
+!**/runs/**/*.yml
+!**/runs/**/*.log
+!**/runs/**/*.pth
+
+# generated artifacts left behind inside archived legacy projects (not
+# source -- training logs/plots/outputs re-created by re-running old code)
+archives/**/logs/**
+!archives/**/logs/**/
+archives/**/plots/**
+!archives/**/plots/**/
+archives/**/outputs_*/**
+!archives/**/outputs_*/**/
+# `outputs/` is ignored globally (line 5). Un-ignore the directory itself
+# inside archives/ -- git cannot re-include a file whose parent directory is
+# excluded -- then re-exclude its contents, so only the figures come back.
+!archives/**/outputs/
+archives/**/outputs/**
+!archives/**/outputs/**/
+# ...except the figures. They are the only surviving record of those earlier
+# experiments and CANNOT be regenerated: the datasets they were made from are
+# not versioned and no longer exist anywhere.
+!archives/**/*.png
+# ...and the trained weights of those legacy experiments, for the same
+# reason: the compute that produced them is not coming back.
+!archives/**/*.pth
+archives/**/*.h5
+archives/**/*.gif
+archives/**/*.npz
+archives/**/*.xlsx
+archives/**/*.lock

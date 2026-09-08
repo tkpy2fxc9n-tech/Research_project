@@ -1,0 +1,4 @@
+p6_diag_dataset_comparison -- 4/4 models available (A, B, C, D)
+Test battery: 11 (wave, excitation) rows.
+training_curves_{A,B,C,D}.png: 0/4 copied to /home/aph25/Code_GH/runs/p6_diag_dataset_comparison/figures
+table.csv / table.tex / table_readable.txt written to /home/aph25/Code_GH/runs/p6_diag_dataset_comparison

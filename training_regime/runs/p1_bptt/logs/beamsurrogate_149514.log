@@ -1,0 +1,102 @@
+=== beamsurrogate [run] run_id=p1_bptt model=mlp regime=bptt stabilizer=none dataset=simple features=['U'] ===
+[mem] start: 0.58 Go
+Loaded 2000 trajectories from /home/aph25/Code_GH/data/beam_dataset_simple.h5
+Split distribution (from dataset):
+  train : 1817 simulations (90.8 %)
+  val   :   84 simulations (4.2 %)
+  test  :   99 simulations (5.0 %)
+[mem] after load_hdf5_dataset: 20.61 Go
+[mem] after compute_norm_stats: 20.61 Go
+MLP(
+  (net): Sequential(
+    (0): Linear(in_features=46, out_features=512, bias=True)
+    (1): GELU(approximate='none')
+    (2): Linear(in_features=512, out_features=256, bias=True)
+    (3): GELU(approximate='none')
+    (4): Linear(in_features=256, out_features=64, bias=True)
+    (5): GELU(approximate='none')
+    (6): Linear(in_features=64, out_features=3, bias=True)
+  )
+)
+Parameters: 172,035
+[mem] after make_dataloaders: 38.33 Go
+[mem] after trimming df to test split: 19.81 Go
+Epoch    1/100 -- combined loss (train): 14.7568  |  comparable loss (val): 13.0136 -- 235.1s
+Epoch    2/100 -- combined loss (train): 11.6500  |  comparable loss (val): 25.3077 -- 232.9s
+Epoch    3/100 -- combined loss (train): 25.3281  |  comparable loss (val): 11.3914 -- 234.1s
+Epoch    4/100 -- combined loss (train): 12.9875  |  comparable loss (val): 7.4784 -- 234.3s
+Epoch    5/100 -- combined loss (train): 11.6573  |  comparable loss (val): 6.5348 -- 236.5s
+Epoch    6/100 -- combined loss (train): 9.2487  |  comparable loss (val): 4.8063 -- 234.1s
+Epoch    7/100 -- combined loss (train): 8.2606  |  comparable loss (val): 5.9918 -- 235.4s
+Epoch    8/100 -- combined loss (train): 8.1354  |  comparable loss (val): 4.9168 -- 235.4s
+Epoch    9/100 -- combined loss (train): 8.1985  |  comparable loss (val): 6.1868 -- 236.2s
+Epoch   10/100 -- combined loss (train): 7.2378  |  comparable loss (val): 6.6831 -- 228.6s
+Epoch   11/100 -- combined loss (train): 6.6101  |  comparable loss (val): 7.8308 -- 223.6s
+Epoch   12/100 -- combined loss (train): 8.6811  |  comparable loss (val): 5.8766 -- 221.8s
+Epoch   13/100 -- combined loss (train): 6.0420  |  comparable loss (val): 4.4293 -- 222.1s
+Epoch   14/100 -- combined loss (train): 5.9520  |  comparable loss (val): 12.9765 -- 220.8s
+Epoch   15/100 -- combined loss (train): 645.2493  |  comparable loss (val): 10.0657 -- 220.1s
+Epoch   16/100 -- combined loss (train): 9.4419  |  comparable loss (val): 19.9097 -- 221.0s
+Epoch   17/100 -- combined loss (train): 8.0106  |  comparable loss (val): 4.3344 -- 220.4s
+Epoch   18/100 -- combined loss (train): 8.8324  |  comparable loss (val): 20.6731 -- 221.6s
+Epoch   19/100 -- combined loss (train): 7.8002  |  comparable loss (val): 13.5141 -- 219.9s
+Epoch   20/100 -- combined loss (train): 8.3434  |  comparable loss (val): 8.1132 -- 220.7s
+Epoch   21/100 -- combined loss (train): 6.0217  |  comparable loss (val): 5.9854 -- 220.5s
+Epoch   22/100 -- combined loss (train): 6.2351  |  comparable loss (val): 1.6642 -- 222.3s
+Epoch   23/100 -- combined loss (train): 733.2957  |  comparable loss (val): 8.6454 -- 220.8s
+Epoch   24/100 -- combined loss (train): 7.4293  |  comparable loss (val): 31.1300 -- 220.8s
+Epoch   25/100 -- combined loss (train): 7.3450  |  comparable loss (val): 5.1481 -- 221.5s
+Epoch   26/100 -- combined loss (train): 5.2060  |  comparable loss (val): 5.6064 -- 223.2s
+Epoch   27/100 -- combined loss (train): 5.9263  |  comparable loss (val): 6.9792 -- 221.5s
+Epoch   28/100 -- combined loss (train): 5.3491  |  comparable loss (val): 3.3106 -- 221.1s
+Epoch   29/100 -- combined loss (train): 107516.5156  |  comparable loss (val): 6.7621 -- 221.4s
+Epoch   30/100 -- combined loss (train): 5.0092  |  comparable loss (val): 3.6840 -- 221.1s
+Epoch   31/100 -- combined loss (train): 4.2917  |  comparable loss (val): 3.6318 -- 223.2s
+Epoch   32/100 -- combined loss (train): 4.1524  |  comparable loss (val): 6.0123 -- 220.4s
+Epoch   33/100 -- combined loss (train): 5.0125  |  comparable loss (val): 7.2306 -- 220.0s
+Epoch   34/100 -- combined loss (train): 4.7492  |  comparable loss (val): 3.0058 -- 220.0s
+Epoch   35/100 -- combined loss (train): 195520.8125  |  comparable loss (val): 7.6041 -- 221.7s
+Epoch   36/100 -- combined loss (train): 7.3906  |  comparable loss (val): 5.2226 -- 219.8s
+Epoch   37/100 -- combined loss (train): 5.4753  |  comparable loss (val): 5.1286 -- 220.2s
+Epoch   38/100 -- combined loss (train): 4.6686  |  comparable loss (val): 8.3441 -- 220.7s
+Epoch   39/100 -- combined loss (train): 3.9707  |  comparable loss (val): 2.8360 -- 222.1s
+Epoch   40/100 -- combined loss (train): 3.7747  |  comparable loss (val): 11.1128 -- 220.7s
+Epoch   41/100 -- combined loss (train): 5.1873  |  comparable loss (val): 4.3169 -- 220.4s
+Epoch   42/100 -- combined loss (train): 5.3849  |  comparable loss (val): 4.0797 -- 220.2s
+Epoch   43/100 -- combined loss (train): 5.9952  |  comparable loss (val): 2.7041 -- 220.2s
+Epoch   44/100 -- combined loss (train): 4.7920  |  comparable loss (val): 6.0264 -- 222.2s
+Epoch   45/100 -- combined loss (train): 5.2539  |  comparable loss (val): 7.3085 -- 220.5s
+Epoch   46/100 -- combined loss (train): 4.6484  |  comparable loss (val): 1.7450 -- 220.3s
+Epoch   47/100 -- combined loss (train): 4.9277  |  comparable loss (val): 8.4789 -- 220.4s
+Epoch   48/100 -- combined loss (train): 4.5827  |  comparable loss (val): 3.1748 -- 222.3s
+Epoch   49/100 -- combined loss (train): 4.2367  |  comparable loss (val): 2.6951 -- 220.0s
+Epoch   50/100 -- combined loss (train): 4.3898  |  comparable loss (val): 6.4317 -- 220.3s
+Epoch   51/100 -- combined loss (train): 3.9943  |  comparable loss (val): 6.1137 -- 220.7s
+Epoch   52/100 -- combined loss (train): 4.0267  |  comparable loss (val): 5.0673 -- 222.8s
+Epoch   53/100 -- combined loss (train): 3.7967  |  comparable loss (val): 4.9566 -- 220.2s
+Epoch   54/100 -- combined loss (train): 3.8553  |  comparable loss (val): 2.3553 -- 219.9s
+Epoch   55/100 -- combined loss (train): 102.7923  |  comparable loss (val): 18.8154 -- 220.3s
+Epoch   56/100 -- combined loss (train): 5.4948  |  comparable loss (val): 2.5822 -- 220.5s
+Epoch   57/100 -- combined loss (train): 3.3215  |  comparable loss (val): 2.1892 -- 223.4s
+Epoch   58/100 -- combined loss (train): 3.1379  |  comparable loss (val): 3.0889 -- 220.6s
+Epoch   59/100 -- combined loss (train): 3.7623  |  comparable loss (val): 5.4641 -- 220.3s
+Epoch   60/100 -- combined loss (train): 3.7340  |  comparable loss (val): 2.1448 -- 220.3s
+Epoch   61/100 -- combined loss (train): 4.3511  |  comparable loss (val): 7.3532 -- 222.4s
+Epoch   62/100 -- combined loss (train): 3.7144  |  comparable loss (val): 6.2470 -- 221.8s
+Epoch   63/100 -- combined loss (train): 3.2516  |  comparable loss (val): 6.2800 -- 222.5s
+Epoch   64/100 -- combined loss (train): 3.4102  |  comparable loss (val): 1.9213 -- 231.5s
+Epoch   65/100 -- combined loss (train): 3.5653  |  comparable loss (val): 6.4945 -- 233.0s
+Epoch   66/100 -- combined loss (train): 3.3230  |  comparable loss (val): 20.7995 -- 232.1s
+Epoch   67/100 -- combined loss (train): 3.3116  |  comparable loss (val): 3.4646 -- 232.1s
+Epoch   68/100 -- combined loss (train): 896452308529840128.0000  |  comparable loss (val): 10.2571 -- 232.2s
+Epoch   69/100 -- combined loss (train): 9.3519  |  comparable loss (val): 7.4456 -- 233.7s
+Epoch   70/100 -- combined loss (train): 4.3488  |  comparable loss (val): 2.5080 -- 230.5s
+Epoch   71/100 -- combined loss (train): 3.1695  |  comparable loss (val): 11.3718 -- 231.2s
+Epoch   72/100 -- combined loss (train): 2.7416  |  comparable loss (val): 4.2526 -- 232.0s
+Early stopping at epoch 72: val loss hasn't improved for 50 epochs (best=1.664199).
+Best model reloaded -- minimum comparable loss (val): 1.664199
+[mem] after training: 20.19 Go
+[mem] after evaluate_one_step: 20.30 Go
+[mem] after rollout + benchmark: 20.30 Go
+Done -- outputs in /home/aph25/Code_GH/runs/p1_bptt
+RUN DONE: configs/runs/p1_bptt.yaml

@@ -1,0 +1,127 @@
+=== beamsurrogate [run] run_id=p8_nondim model=mlp regime=teacher_forcing stabilizer=none dataset=simple_nondim features=['U'] ===
+[mem] start: 0.58 Go
+Loaded 2000 trajectories from /home/aph25/Code_GH/data/beam_dataset_simple_nondim.h5
+Split distribution (from dataset):
+  train : 1826 simulations (91.3 %)
+  val   :   88 simulations (4.4 %)
+  test  :   86 simulations (4.3 %)
+[mem] after load_hdf5_dataset: 20.61 Go
+[mem] after compute_norm_stats: 20.61 Go
+MLP(
+  (net): Sequential(
+    (0): Linear(in_features=46, out_features=512, bias=True)
+    (1): GELU(approximate='none')
+    (2): Linear(in_features=512, out_features=256, bias=True)
+    (3): GELU(approximate='none')
+    (4): Linear(in_features=256, out_features=64, bias=True)
+    (5): GELU(approximate='none')
+    (6): Linear(in_features=64, out_features=3, bias=True)
+  )
+)
+Parameters: 172,035
+[mem] after make_dataloaders: 38.42 Go
+[mem] after trimming df to test split: 19.80 Go
+Epoch    1/100  --  data: 0.0022  |  val: 0.0002
+Epoch    2/100  --  data: 0.0002  |  val: 0.0002
+Epoch    3/100  --  data: 0.0001  |  val: 0.0001
+Epoch    4/100  --  data: 0.0001  |  val: 0.0000
+Epoch    5/100  --  data: 0.0001  |  val: 0.0001
+Epoch    6/100  --  data: 0.0001  |  val: 0.0001
+Epoch    7/100  --  data: 0.0001  |  val: 0.0001
+Epoch    8/100  --  data: 0.0001  |  val: 0.0000
+Epoch    9/100  --  data: 0.0001  |  val: 0.0000
+Epoch   10/100  --  data: 0.0001  |  val: 0.0001
+Epoch   11/100  --  data: 0.0001  |  val: 0.0001
+Epoch   12/100  --  data: 0.0001  |  val: 0.0000
+Epoch   13/100  --  data: 0.0001  |  val: 0.0000
+Epoch   14/100  --  data: 0.0001  |  val: 0.0001
+Epoch   15/100  --  data: 0.0000  |  val: 0.0000
+Epoch   16/100  --  data: 0.0000  |  val: 0.0000
+Epoch   17/100  --  data: 0.0001  |  val: 0.0000
+Epoch   18/100  --  data: 0.0000  |  val: 0.0000
+Epoch   19/100  --  data: 0.0000  |  val: 0.0000
+Epoch   20/100  --  data: 0.0000  |  val: 0.0000
+Epoch   21/100  --  data: 0.0000  |  val: 0.0000
+Epoch   22/100  --  data: 0.0000  |  val: 0.0000
+Epoch   23/100  --  data: 0.0000  |  val: 0.0000
+Epoch   24/100  --  data: 0.0000  |  val: 0.0000
+Epoch   25/100  --  data: 0.0000  |  val: 0.0000
+Epoch   26/100  --  data: 0.0000  |  val: 0.0000
+Epoch   27/100  --  data: 0.0000  |  val: 0.0001
+Epoch   28/100  --  data: 0.0000  |  val: 0.0001
+Epoch   29/100  --  data: 0.0000  |  val: 0.0000
+Epoch   30/100  --  data: 0.0000  |  val: 0.0000
+Epoch   31/100  --  data: 0.0000  |  val: 0.0000
+Epoch   32/100  --  data: 0.0000  |  val: 0.0000
+Epoch   33/100  --  data: 0.0000  |  val: 0.0000
+Epoch   34/100  --  data: 0.0000  |  val: 0.0000
+Epoch   35/100  --  data: 0.0000  |  val: 0.0000
+Epoch   36/100  --  data: 0.0000  |  val: 0.0000
+Epoch   37/100  --  data: 0.0000  |  val: 0.0000
+Epoch   38/100  --  data: 0.0000  |  val: 0.0000
+Epoch   39/100  --  data: 0.0000  |  val: 0.0000
+Epoch   40/100  --  data: 0.0000  |  val: 0.0000
+Epoch   41/100  --  data: 0.0000  |  val: 0.0000
+Epoch   42/100  --  data: 0.0000  |  val: 0.0000
+Epoch   43/100  --  data: 0.0000  |  val: 0.0000
+Epoch   44/100  --  data: 0.0000  |  val: 0.0000
+Epoch   45/100  --  data: 0.0000  |  val: 0.0000
+Epoch   46/100  --  data: 0.0000  |  val: 0.0000
+Epoch   47/100  --  data: 0.0000  |  val: 0.0000
+Epoch   48/100  --  data: 0.0000  |  val: 0.0000
+Epoch   49/100  --  data: 0.0000  |  val: 0.0000
+Epoch   50/100  --  data: 0.0000  |  val: 0.0000
+Epoch   51/100  --  data: 0.0000  |  val: 0.0000
+Epoch   52/100  --  data: 0.0000  |  val: 0.0000
+Epoch   53/100  --  data: 0.0000  |  val: 0.0000
+Epoch   54/100  --  data: 0.0000  |  val: 0.0000
+Epoch   55/100  --  data: 0.0000  |  val: 0.0000
+Epoch   56/100  --  data: 0.0000  |  val: 0.0001
+Epoch   57/100  --  data: 0.0000  |  val: 0.0000
+Epoch   58/100  --  data: 0.0000  |  val: 0.0000
+Epoch   59/100  --  data: 0.0000  |  val: 0.0000
+Epoch   60/100  --  data: 0.0000  |  val: 0.0000
+Epoch   61/100  --  data: 0.0000  |  val: 0.0000
+Epoch   62/100  --  data: 0.0000  |  val: 0.0000
+Epoch   63/100  --  data: 0.0000  |  val: 0.0000
+Epoch   64/100  --  data: 0.0000  |  val: 0.0000
+Epoch   65/100  --  data: 0.0000  |  val: 0.0000
+Epoch   66/100  --  data: 0.0000  |  val: 0.0000
+Epoch   67/100  --  data: 0.0000  |  val: 0.0000
+Epoch   68/100  --  data: 0.0000  |  val: 0.0000
+Epoch   69/100  --  data: 0.0000  |  val: 0.0000
+Epoch   70/100  --  data: 0.0000  |  val: 0.0000
+Epoch   71/100  --  data: 0.0000  |  val: 0.0000
+Epoch   72/100  --  data: 0.0000  |  val: 0.0000
+Epoch   73/100  --  data: 0.0000  |  val: 0.0000
+Epoch   74/100  --  data: 0.0000  |  val: 0.0000
+Epoch   75/100  --  data: 0.0000  |  val: 0.0000
+Epoch   76/100  --  data: 0.0000  |  val: 0.0000
+Epoch   77/100  --  data: 0.0000  |  val: 0.0000
+Epoch   78/100  --  data: 0.0000  |  val: 0.0000
+Epoch   79/100  --  data: 0.0000  |  val: 0.0000
+Epoch   80/100  --  data: 0.0000  |  val: 0.0000
+Epoch   81/100  --  data: 0.0000  |  val: 0.0000
+Epoch   82/100  --  data: 0.0000  |  val: 0.0000
+Epoch   83/100  --  data: 0.0000  |  val: 0.0000
+Epoch   84/100  --  data: 0.0000  |  val: 0.0000
+Epoch   85/100  --  data: 0.0000  |  val: 0.0000
+Epoch   86/100  --  data: 0.0000  |  val: 0.0000
+Epoch   87/100  --  data: 0.0000  |  val: 0.0000
+Epoch   88/100  --  data: 0.0000  |  val: 0.0000
+Epoch   89/100  --  data: 0.0000  |  val: 0.0000
+Epoch   90/100  --  data: 0.0000  |  val: 0.0000
+Epoch   91/100  --  data: 0.0000  |  val: 0.0000
+Epoch   92/100  --  data: 0.0000  |  val: 0.0000
+Epoch   93/100  --  data: 0.0000  |  val: 0.0000
+Epoch   94/100  --  data: 0.0000  |  val: 0.0000
+Epoch   95/100  --  data: 0.0000  |  val: 0.0000
+Epoch   96/100  --  data: 0.0000  |  val: 0.0000
+Epoch   97/100  --  data: 0.0000  |  val: 0.0000
+Epoch   98/100  --  data: 0.0000  |  val: 0.0000
+Epoch   99/100  --  data: 0.0000  |  val: 0.0000
+Epoch  100/100  --  data: 0.0000  |  val: 0.0000
+Best model reloaded -- minimum val: 0.000002
+[mem] after training: 20.11 Go
+[mem] after evaluate_one_step: 20.21 Go
+[mem] after rollout + benchmark: 20.21 Go

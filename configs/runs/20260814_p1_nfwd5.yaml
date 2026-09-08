@@ -1,7 +1,0 @@
-inherit: base
-run_id: 20260814_p1_nfwd5
-phase: 1
-hypothesis: H3
-N_FWD: 5
-# Receptive-field constraint N_FWD*ndt <= SS: 5*2=10 <= SS=11 -- the tightest
-# point of this sweep, right at the edge base.yaml's SS was chosen for.

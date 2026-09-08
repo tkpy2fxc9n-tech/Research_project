@@ -1,0 +1,694 @@
+from pathlib import Path
+
+SCRIPT_DIR = Path(__file__).resolve().parent
+OUTPUT_DIR = SCRIPT_DIR / "outputs"
+OUTPUT_DIR.mkdir(exist_ok=True)
+
+import matplotlib
+matplotlib.use("Agg")  # backend non-interactif, pas de fenêtre qui s'ouvre
+
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from itertools import product
+
+all_dfs = []
+
+# Parameters
+E=1
+rho=2
+L=1
+
+Nt=300
+Nx=100
+SS=4
+
+Ntot = Nx + 2*SS
+
+i_left = SS
+i_right = Ntot - SS
+nodes = np.arange(i_left, i_right)  
+
+t_end=3
+dt=t_end/Nt
+dx = L / (Nx - 1)
+CFL = dt/dx * np.sqrt(E/rho)
+
+ndt = 5
+
+N=6
+LAG_LABELS = {0: "t", 1: "t-dt", 2: "t-2dt"}
+
+def jlabel(k):
+    return "j" if k == 0 else f"j{k:+d}"
+
+AMPLITUDES = np.linspace(0.005, 0.1, N).round(3).tolist()
+PULSATIONS = np.linspace(1, 10, N).round(1).tolist()
+n_sims = len(AMPLITUDES)*len(PULSATIONS)
+
+# We compute each simulation
+all_dfs = []
+
+for idx, (A, omega) in enumerate(product(AMPLITUDES, PULSATIONS), start=1):
+
+    t_pulse = 2 * np.pi / omega
+    def u_right(t):
+        return A * np.sin(omega * t) if t < t_pulse else 0.0
+
+    u    = np.zeros(Ntot)
+    u_1  = np.zeros(Ntot)
+    u_xx = np.zeros(Ntot)
+
+    u_storage    = np.zeros((Nt + 1, Ntot))
+    u_xx_storage = np.zeros((Nt,     Ntot))
+    u_storage[0] = u.copy()
+
+    i_left  = SS
+    i_right = Ntot - SS
+
+    # --- Boucle de simulation sur la grille étendue ---
+    for n in range(Nt):
+
+        t = n * dt
+
+        u_xx[i_left:i_right+1] = (u[i_left-1:i_right] - 2*u[i_left:i_right+1] + u[i_left+1:i_right+2]) / dx**2
+
+        u_new = np.zeros(Ntot)
+
+        u_new[i_left:i_right+1] = (2.0 * u[i_left:i_right+1] - u_1[i_left:i_right+1] + CFL**2 * (u[i_left-1:i_right] - 2.0 * u[i_left:i_right+1] + u[i_left+1:i_right+2]))
+
+        u_new[:i_left+1] = 0.0     
+        u_new[i_right:]  = u_right(t + dt) 
+
+        u_xx_storage[n] = u_xx
+        
+        u_1 = u.copy()
+        
+        u   = u_new
+        
+        u_storage[n + 1] = u.copy()
+
+    rows = []
+    
+    for n in range(3*ndt, Nt - ndt + 1):
+        row = {"A": A, "omega": omega, "n_step": n}
+
+        for lvl in (0, 1, 2):    
+
+            m    = n - lvl * ndt                            
+            tlab = LAG_LABELS[lvl]
+            udot_m = (u_storage[m] - u_storage[m - ndt]) / (ndt * dt) 
+
+            for k in range(-SS, SS + 1):                     
+                row[f"u_dot({tlab},{jlabel(k)})"] = udot_m[nodes + k]
+                row[f"u({tlab},{jlabel(k)})"]  = u_storage[m, nodes + k]
+
+        row["delta_u@ndt"] = u_storage[n + ndt, nodes] - u_storage[n, nodes]
+
+        rows.append(pd.DataFrame(row))
+
+    all_dfs.append(pd.concat(rows, ignore_index=True))
+
+df = pd.concat(all_dfs, ignore_index=True)
+print(df.head(0))
+print(f"{len(df):,} lignes × {df.shape[1]} colonnes")
+
+rng = np.random.default_rng(seed=42)
+
+n_rows = len(df)
+n_train = int(0.60 * n_rows)
+n_val   = int(0.20 * n_rows)
+n_test  = n_rows - n_train - n_val
+
+
+split_labels = np.array(["train"] * n_train + ["val"] * n_val + ["test"] * n_test)
+rng.shuffle(split_labels)
+df["split"] = split_labels
+
+print("Distribution du split :")
+for s in ["train", "val", "test"]:
+    n = (df["split"] == s).sum()
+    print(f"  {s:5s} : {n:>8,} lignes  ({100*n/len(df):.1f} %)")
+
+    # Les colonnes qui ne sont PAS des features d'entrée
+a_exclure = ["A", "omega", "n_step", "delta_u@ndt", "split"]
+
+INPUTS = [c for c in df.columns if c not in a_exclure]
+OUTPUTS = ["delta_u@ndt"]
+
+# Masque train pour calculer les stats uniquement sur le train set
+train_mask = df["split"] == "train"
+
+# Calcul des stats sur le train set uniquement
+norm_stats = pd.DataFrame({
+    "mean": df.loc[train_mask, INPUTS + OUTPUTS].mean(),
+    "std" : df.loc[train_mask, INPUTS + OUTPUTS].std(),
+})
+norm_stats["std"] = norm_stats["std"].replace(0, 1)  # éviter division par 0
+
+# Application à tout le dataset
+for col in INPUTS + OUTPUTS:
+    df[col + "_n"] = (df[col] - norm_stats.loc[col, "mean"]) / norm_stats.loc[col, "std"]
+
+# Architecture du réseau
+HIDDEN_SIZES = [256, 128, 64]   
+
+# Entraînement
+LEARNING_RATE = 1e-3
+N_EPOCHS      = 50
+BATCH_SIZE    = 512
+
+import numpy as np
+import pandas as pd
+import torch
+import torch.nn as nn
+from torch.utils.data import DataLoader, TensorDataset
+import matplotlib.pyplot as plt
+
+#To check and visualise
+print(f"Dataset : {len(df):,} lignes")
+print(f"Splits  : {df['split'].value_counts().to_dict()}")
+
+# Colonnes normalisées
+INPUTS_N = [f"{x}_n" for x in INPUTS]
+OUTPUTS_N = [f"{x}_n" for x in OUTPUTS]
+
+# Extraction train / val / test en utilisant la colonne split du dataset
+train_mask = df["split"] == "train"
+val_mask   = df["split"] == "val"
+test_mask  = df["split"] == "test"
+
+X_train = df.loc[train_mask, INPUTS_N].values.astype(np.float32)
+y_train = df.loc[train_mask, OUTPUTS_N].values.astype(np.float32)
+
+X_val   = df.loc[val_mask, INPUTS_N].values.astype(np.float32)
+y_val   = df.loc[val_mask, OUTPUTS_N].values.astype(np.float32)
+
+X_test  = df.loc[test_mask, INPUTS_N].values.astype(np.float32)  
+y_test  = df.loc[test_mask, OUTPUTS_N].values.astype(np.float32)  
+
+print(f"\nTrain : {len(X_train):,} exemples")
+print(f"Val   : {len(X_val):,} exemples")
+print(f"Test  : {len(X_test):,} exemples")  
+
+# Conversion en tenseurs PyTorch et création des DataLoaders
+train_loader = DataLoader(TensorDataset(torch.tensor(X_train), torch.tensor(y_train)),batch_size=BATCH_SIZE, shuffle=True)
+val_loader = DataLoader(TensorDataset(torch.tensor(X_val), torch.tensor(y_val)),batch_size=BATCH_SIZE)
+test_loader = DataLoader(TensorDataset(torch.tensor(X_test), torch.tensor(y_test)),batch_size=BATCH_SIZE, shuffle=False)
+
+class Reseau(nn.Module):
+
+    def __init__(self, n_inputs, n_outputs, hidden_sizes):
+        super().__init__()
+
+        couches = []
+        taille_entree = n_inputs
+
+        for taille in hidden_sizes:
+            couches.append(nn.Linear(taille_entree, taille))  # couche linéaire
+            couches.append(nn.Tanh())                              # activation non-linéaire
+            taille_entree = taille
+
+        couches.append(nn.Linear(taille_entree, n_outputs))  # couche de sortie
+        self.reseau = nn.Sequential(*couches)
+
+    def forward(self, x):
+        return self.reseau(x)
+
+
+modele = Reseau(
+    n_inputs    = len(INPUTS_N), 
+    n_outputs   = len(OUTPUTS_N),   
+    hidden_sizes = HIDDEN_SIZES,
+)
+
+n_params = sum(p.numel() for p in modele.parameters())
+print(modele)
+print(f"\nNombre de paramètres : {n_params:,}")
+
+criterion  = nn.MSELoss() 
+
+optimiseur = torch.optim.Adam(modele.parameters(), lr=LEARNING_RATE)
+scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+    optimiseur, mode="min", factor=0.5, patience=10
+)
+
+historique_train = []
+historique_val   = []
+
+meilleure_val = float("inf")   # on initialise au pire score possible
+patience_compteur = 0          # on verra ça après
+
+for epoch in range(1, N_EPOCHS + 1):
+
+    # Phase entraînement
+    modele.train()
+    perte_train = 0.0       #initialisation of training loss
+    for X_batch, y_batch in train_loader:
+        
+        optimiseur.zero_grad()                       # remet les gradients à zéro
+
+        prediction = modele(X_batch)                 # prédiction
+
+        perte      = criterion(prediction, y_batch)  # erreur
+
+        perte.backward()                             # rétropropagation
+
+        optimiseur.step()                            # mise à jour des poids
+        
+        perte_train += perte.item()
+    perte_train /= len(train_loader)
+
+    # Phase validation : un seul forward pass sur tout le val
+    modele.eval()
+    with torch.no_grad():
+        pred_val = modele(torch.tensor(X_val)).numpy()
+
+    # Loss globale 
+    perte_val = ((pred_val - y_val)**2).mean()
+    scheduler.step(perte_val)
+
+    # Loss par output
+    historique_train.append(perte_train)
+    historique_val  .append(perte_val)
+
+    if epoch % 2 == 0:
+        print(f"Epoch {epoch:4d}/{N_EPOCHS}  —  "
+            f"train: {perte_train:.4f}  |  "
+            f"val: {perte_val:.4f}  ")
+    
+    # Si la val s'est améliorée, on sauvegarde ce modèle
+    if perte_val < meilleure_val:
+        meilleure_val = perte_val
+        torch.save(modele.state_dict(), "model.pth")   # on écrase avec le meilleur
+
+# Courbe d'apprentissage
+fig, ax = plt.subplots(figsize=(8, 4))
+ax.plot(historique_train, label="Train")
+ax.plot(historique_val,   label="Validation")
+ax.set_xlabel("Epoch") ; ax.set_ylabel("Erreur MSE")
+ax.set_title("Courbe d'apprentissage")
+ax.set_yscale("log")
+ax.legend()
+ax.grid(True)
+plt.tight_layout()
+plt.savefig(OUTPUT_DIR / "courbe_apprentissage.png", dpi=150, bbox_inches="tight")
+plt.close()
+
+# On recharge le meilleur modèle trouvé pendant l'entraînement
+modele.load_state_dict(torch.load("model.pth",weights_only=True ))
+print(f"Meilleur modèle rechargé — val minimale : {meilleure_val:.6f}")
+
+# --- 1. Choisir des paramètres ---
+df_test=df[df["split"]=="test"].reset_index(drop=True)
+
+X_new  = df_test[[c + "_n" for c in INPUTS]].values.astype(np.float32)
+y_true = df_test[OUTPUTS].values   # shape (N, 3)
+
+# --- 4. Prédiction ---
+modele.eval()
+with torch.no_grad():
+    y_pred_n = modele(torch.tensor(X_new)).numpy()   # shape (N, 3)
+
+# Dénormalisation colonne par colonne
+y_pred = np.zeros_like(y_pred_n)
+for i, col in enumerate(OUTPUTS):
+    mean_du = norm_stats.loc[col, "mean"]
+    std_du  = norm_stats.loc[col, "std"]
+    y_pred[:, i] = y_pred_n[:, i] * std_du + mean_du
+
+# --- 5. Visualisation : une figure par sortie ---
+fig, axes = plt.subplots(1, len(OUTPUTS), figsize=(6*len(OUTPUTS), 6), squeeze=False)
+axes = axes.flatten()
+
+for i, (ax, col) in enumerate(zip(axes, OUTPUTS)):
+    y_r = y_true[:, i]
+    y_p = y_pred[:, i]
+    
+    ax.scatter(y_r, y_p, alpha=0.4, s=8)
+    lim = max(abs(y_r).max(), abs(y_p).max())
+    ax.plot([-lim, lim], [-lim, lim], "r--", lw=1, label="prédiction parfaite")
+    
+    ax.set_xlabel(f"{col} réel")
+    ax.set_ylabel(f"{col} prédit")
+    
+    mse = ((y_p - y_r)**2).mean()
+    r2  = 1 - mse / y_r.var()
+    ax.set_title(f"{col}\nMSE={mse:.2e}  |  R²={r2:.3f}")
+    ax.legend()
+    ax.grid(True)
+
+fig.suptitle("Test sur toutes les données test du dataset", fontsize=14)
+plt.tight_layout()
+plt.savefig(OUTPUT_DIR / "test_predictions.png", dpi=150, bbox_inches="tight")
+plt.close()
+
+# --- 6. Métriques globales ---
+for i, col in enumerate(OUTPUTS):
+    mse = ((y_pred[:,i] - y_true[:,i])**2).mean()
+    r2  = 1 - mse / y_true[:,i].var()
+    print(f"{col:15s} : MSE = {mse:.4e}  |  R² = {r2:.4f}")
+
+# Roll out cell  (avance par paquets de 1 pas)
+import time
+
+A, omega = AMPLITUDES[2], PULSATIONS[2]
+dx = L / (Nx - 1)
+dt = t_end / Nt
+x = np.linspace(0, L, Nx)
+t_list = [0.5]
+
+t_pulse = 2 * np.pi / omega
+
+def u_right(t):
+    if t < t_pulse:
+        return A * np.sin(omega * t)
+    else:
+        return 0.0
+
+def u_xx_de(uu):
+    out = np.zeros(Nx)
+    out[1:-1] = (uu[2:] - 2*uu[1:-1] + uu[:-2]) / dx**2
+    return out
+
+def shift_clamp(a, dk):                
+    idx = np.clip(np.arange(Nx) + dk, 0, Nx - 1)
+    return a[idx]
+
+# Décodage automatique des noms de colonnes : "u_xx(t-dt,j+1)" -> ("u_xx", 1, +1)
+def parse_feature(name):
+    field, rest = name.replace("@", "").split("(")
+    time_lab, space_lab = rest.rstrip(")").split(",")
+    k = {"t": 0, "t-dt": 1, "t-2dt": 2}[time_lab]
+
+    # space_lab vaut "j", "j-3", "j+5", ...
+    if space_lab == "j":
+        off = 0
+    else:
+        off = int(space_lab[1:])   # on enlève le "j" et on convertit le reste en nombre
+
+    return field, k, off
+
+SPEC  = [parse_feature(c) for c in INPUTS]  
+
+i_left, i_right = SS, Ntot - SS
+print(i_left, i_right)
+print(len(x))
+nodes = np.arange(i_left, i_right) 
+mu = norm_stats.loc[OUTPUTS, "mean"].values    
+sd = norm_stats.loc[OUTPUTS, "std"].values   
+
+def u_xx_etendu(u):                
+    u_xx = np.zeros(Ntot)
+    u_xx[i_left:i_right+1] = (u[i_left-1:i_right] - 2*u[i_left:i_right+1] + u[i_left+1:i_right+2]) / dx**2
+    return u_xx
+
+# =====================================================
+# 1) VRAIE simulation
+# =====================================================
+
+t0 = time.perf_counter()
+
+U_reel = np.zeros((Nt + 1, Ntot))
+u, u_1 = np.zeros(Ntot), np.zeros(Ntot)
+ureel_tt_dict = np.zeros((Nt, Ntot))
+ureel_xx_dict = np.zeros((Nt, Ntot))
+
+for n in range(Nt):
+    t = n * dt
+    u_new = np.zeros(Ntot)
+    u_new[i_left:i_right+1] = (2*u[i_left:i_right+1] - u_1[i_left:i_right+1] + CFL**2 * (u[i_left-1:i_right] - 2*u[i_left:i_right+1] + u[i_left+1:i_right+2]))
+    u_new[:i_left+1] = 0.0
+    u_new[i_right:]  = u_right(t + dt)
+
+    ureel_tt_dict[n, i_left:i_right+1] = (u_new[i_left:i_right+1] - 2*u[i_left:i_right+1] + u_1[i_left:i_right+1]) / dt**2
+    ureel_xx_dict[n, i_left:i_right+1] = (u[i_left-1:i_right] - 2*u[i_left:i_right+1] + u[i_left+1:i_right+2] ) / dx**2
+
+    u_1, u = u.copy(), u_new
+    U_reel[n + 1] = u.copy()
+
+# Verification of wave equation with graph 
+
+instants = [50, 100, 200]
+
+plt.figure()
+for n in instants:
+    xx_vals = ureel_xx_dict[n, i_left+1:i_right]  
+    tt_vals = ureel_tt_dict[n, i_left+1:i_right] 
+    plt.scatter(xx_vals, tt_vals, s=10, label=f"n = {n}")
+
+plt.xlabel("u_xx (réel)")
+plt.ylabel("u_tt (réel)")
+plt.legend()
+plt.grid()
+plt.xlim(-10, 10)
+plt.ylim(-10, 10)
+plt.title("u_tt en fonction de u_xx (real)")
+plt.savefig(OUTPUT_DIR / "utt_uxx_reel.png", dpi=150, bbox_inches="tight")
+plt.close()
+    
+time_phys = time.perf_counter() - t0
+
+# =====================================================
+# 2) Simulation PREDITE
+# =====================================================
+
+t0 = time.perf_counter()
+
+history_needed = 3 * ndt
+
+# Biais au repos (état nul) : principe inchangé
+Xz = np.zeros((len(nodes), len(INPUTS)), dtype=np.float32)
+for i, (name, (field, k, off)) in enumerate(zip(INPUTS, SPEC)):
+    Xz[:, i] = (np.zeros(len(nodes)) - norm_stats.loc[name, "mean"]) / norm_stats.loc[name, "std"]
+
+with torch.no_grad():
+    biais_repos = (modele(torch.tensor(Xz)).numpy() * sd + mu)[0, 0]
+
+U = np.zeros((Nt + 1 + history_needed, Ntot))
+
+u_tt_dict = {}
+u_xx_dict = {}
+
+u_0 = np.zeros(Ntot)
+u_1 = np.zeros(Ntot)
+u_2 = np.zeros(Ntot)
+
+for m in range(history_needed + 1):
+    U[m] = U_reel[m]
+
+for n in range(history_needed, Nt + history_needed - ndt + 1, ndt) :
+
+    t = n * dt
+    t_suivant = round((n+ndt)*dt, 5)
+
+    udot_0 = (U[n]  - U[n - ndt]) / (ndt*dt)
+    udot_1 = (U[n   - 1*ndt]    - U[n - 2*ndt])  / (ndt*dt)
+    udot_2 = (U[n   - 2*ndt]    - U[n - 3*ndt])  / (ndt*dt)
+
+    udot = [udot_0, udot_1, udot_2]
+
+    u_0 = U[n]
+    u_1 = U[n - 1*ndt]
+    u_2 = U[n - 2*ndt]
+    
+    u = [u_0, u_1, u_2]
+
+    X = np.zeros((len(nodes), len(INPUTS)), dtype=np.float32)
+
+    # Une colonne par feature, une ligne par node spatial.
+    for i in range(len(INPUTS)):
+
+        name = INPUTS[i]          
+        field, k, off = SPEC[i]  
+
+        if field == "u_dot":
+            tableau = udot[k]
+        else:
+            tableau = u[k]
+
+        moyenne = norm_stats.loc[name, "mean"]
+        ecart   = norm_stats.loc[name, "std"]
+
+        for ligne in range(len(nodes)):
+            j = nodes[ligne]           
+            valeur = tableau[j + off] 
+            X[ligne, i] = (valeur - moyenne) / ecart
+
+    with torch.no_grad():
+        sortie = modele(torch.tensor(X)).numpy()
+    deltas = sortie * sd + mu - biais_repos
+
+    U[n + ndt, nodes]     = U[n, nodes] + deltas[:, 0]
+
+    U[n + ndt , :i_left+1]    = 0.0            
+    U[n + ndt , i_right:]     = u_right((n + ndt ) * dt)
+
+
+time_pred = time.perf_counter() - t0
+
+upred_tt_dict = np.zeros((Nt, Ntot))
+upred_xx_dict = np.zeros((Nt, Ntot))
+
+for n in range(1, Nt):                       
+    u_prev = U[n - 1 ]      
+    u_curr = U[n     ]      
+    u_next = U[n + 1 ]      
+
+    upred_tt_dict[n, i_left:i_right+1] = (u_next[i_left:i_right+1] - 2*u_curr[i_left:i_right+1] + u_prev[i_left:i_right+1]) / dt**2
+    upred_xx_dict[n, i_left:i_right+1] = (u_curr[i_left-1:i_right] - 2*u_curr[i_left:i_right+1] + u_curr[i_left+1:i_right+2]) / dx**2
+
+instants = [50, 100, 200]
+
+plt.figure()
+for n in instants:
+    xx_vals = upred_xx_dict[n, i_left+1:i_right]
+    tt_vals = upred_tt_dict[n, i_left+1:i_right]
+    plt.scatter(xx_vals, tt_vals, s=10, label=f"n = {n}")
+
+plt.xlabel("u_xx (predit)")
+plt.ylabel("u_tt (predit)")
+plt.grid()
+plt.xlim(-10, 10)
+plt.ylim(-10, 10)
+plt.legend()
+plt.title("u_tt en fonction de u_xx (prediction)")
+plt.savefig(OUTPUT_DIR / "utt_uxx_predit.png", dpi=150, bbox_inches="tight")
+plt.close()
+
+#print("temps physique :", round(time_phys, 6))
+#print("temps predit   :", round(time_pred, 6))
+
+m = 70  # multiple de ndt
+print("bord droit reel  :", U_reel[m, i_right:])
+print("bord droit predit:", U[m, i_right:])
+print("interieur reel   :", U_reel[m, i_right-4:i_right])
+print("interieur predit :", U[m, i_right-4:i_right])
+
+# =====================================================
+# 3) Erreurs
+# =====================================================
+
+def l2_rel(pred, true, eps=1e-12):
+    return np.linalg.norm(pred - true) / (np.linalg.norm(true) + eps)
+
+def smape(pred, true):
+    m = true != 0
+    return np.mean(2*np.abs(true[m] - pred[m]) / (np.abs(true[m]) + np.abs(pred[m])))
+
+def errormax(true, pred, eps=1e-12):
+    return np.max(np.abs(true - pred) / (np.abs(true) + eps))
+
+# =====================================================
+# 4) Traces  (mêmes graphes que le script U seul)
+# =====================================================
+# /!\ Ici le champ prédit est décalé de history_needed :
+#     pred au pas physique k  ==  U[k + history_needed]
+#     reel au pas physique k  ==  U_reel[k]
+# U n'est rempli qu'aux multiples de ndt -> on évalue sur ces pas, sur nodes.
+
+# (a) Erreur L2 relative + Linf (max absolu) en fonction du temps
+steps   = np.arange(2*ndt, Nt + 1, ndt)
+t_axis  = steps * dt
+l2_list   = [l2_rel(U[k , nodes], U_reel[k, nodes])          for k in steps]
+linf_list = [np.max(np.abs(U[k , nodes] - U_reel[k, nodes])) for k in steps]
+
+plt.figure(figsize=(9, 5))
+plt.plot(t_axis, l2_list,   "o-", ms=3, label="erreur L2 relative")
+plt.plot(t_axis, linf_list, "s-", ms=3, label="erreur max absolue (Linf)")
+plt.yscale("log")
+plt.xlabel("t"); plt.ylabel("erreur"); plt.grid(True, which="both"); plt.legend()
+plt.title("Erreur du rollout en fonction du temps")
+plt.savefig(OUTPUT_DIR / "erreur_temps.png", dpi=150, bbox_inches="tight")
+plt.close()
+
+# (b) sMAPE en fonction du temps
+smape_list = [100.0 * smape(U[k , nodes], U_reel[k, nodes]) for k in steps]
+
+plt.figure(figsize=(9, 5))
+plt.plot(t_axis, smape_list, "s-", ms=3, label="sMAPE")
+plt.xlabel("t"); plt.ylabel("erreur (%)"); plt.grid(True); plt.legend()
+plt.title("sMAPE du rollout en fonction du temps")
+plt.savefig(OUTPUT_DIR / "smape_temps.png", dpi=150, bbox_inches="tight")
+plt.close()
+
+# (c) GIF : propagation reelle vs predite + erreur spatiale
+from matplotlib.animation import FuncAnimation, PillowWriter
+
+frames = list(range(0, Nt + 1, ndt))   # U n'est rempli qu'aux multiples de ndt
+
+fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(9, 7), sharex=True)
+ligne_reel,   = ax1.plot([], [], "r",  lw=2, label="reel")
+ligne_predit, = ax1.plot([], [], "b--", lw=2, label="predit")
+ligne_erreur, = ax2.plot([], [], "k",  lw=1.5, label="|predit - reel|")
+
+ax1.set_xlim(0, L)
+ymax = np.abs(U_reel[:, nodes]).max() * 1.1
+ax1.set_ylim(-ymax, ymax)
+ax1.set_ylabel("u"); ax1.legend(loc="upper left"); ax1.grid(True)
+
+frames_arr = np.arange(0, Nt + 1, ndt)
+err_all = np.abs(U[frames_arr ][:, nodes] - U_reel[frames_arr][:, nodes])
+emax = max(err_all.max() * 1.1, 1e-9)
+ax2.set_xlim(0, L); ax2.set_ylim(0, emax)
+ax2.set_xlabel("x"); ax2.set_ylabel("erreur absolue"); ax2.legend(loc="upper left"); ax2.grid(True)
+
+titre = fig.suptitle("")
+
+def init():
+    ligne_reel.set_data([], [])
+    ligne_predit.set_data([], [])
+    ligne_erreur.set_data([], [])
+    return ligne_reel, ligne_predit, ligne_erreur
+
+def update(frame):
+    ligne_reel.set_data(x, U_reel[frame, nodes])
+    ligne_predit.set_data(x, U[frame , nodes])
+    ligne_erreur.set_data(x, np.abs(U[frame , nodes] - U_reel[frame, nodes]))
+    titre.set_text(f"t = {frame * dt:.2f}")
+    return ligne_reel, ligne_predit, ligne_erreur
+
+ani = FuncAnimation(fig, update, frames=frames, init_func=init, blit=False, interval=100)
+ani.save(OUTPUT_DIR / "rollout_animation.gif", writer=PillowWriter(fps=10))
+plt.close(fig)
+
+# =====================================================
+# RESUME : valeurs phares -> outputs/resume.txt
+# =====================================================
+# Erreurs finales (dernier pas rempli) ET max sur tout le rollout
+l2_final,    l2_max    = l2_list[-1],    max(l2_list)
+linf_final,  linf_max  = linf_list[-1],  max(linf_list)
+smape_final, smape_max = smape_list[-1], max(smape_list)
+
+with open(OUTPUT_DIR / "resume.txt", "w") as f:
+    f.write("=====  RESUME DU RUN  =====\n\n")
+
+    f.write("--- Configuration ---\n")
+    f.write(f"Grille          : Nt={Nt}, Nx={Nx}, SS={SS}, ndt={ndt}\n")
+    f.write(f"Rollout (A,w)   : A={A}, omega={omega}\n")
+    f.write(f"Dataset         : {len(df):,} lignes\n")
+    f.write(f"Features        : {len(INPUTS)} entrees, {len(OUTPUTS)} sortie(s)\n")
+    for s in ["train", "val", "test"]:
+        n = (df["split"] == s).sum()
+        f.write(f"  split {s:5s}   : {n:>8,} lignes ({100*n/len(df):.1f} %)\n")
+    f.write(f"Parametres NN   : {n_params:,}\n\n")
+
+    f.write("--- Entrainement ---\n")
+    f.write(f"Val minimale    : {meilleure_val:.6e}\n")
+    for i, col in enumerate(OUTPUTS):
+        mse = ((y_pred[:, i] - y_true[:, i])**2).mean()
+        r2  = 1 - mse / y_true[:, i].var()
+        f.write(f"{col:15s} : MSE = {mse:.4e} | R2 = {r2:.4f}\n")
+    f.write("\n")
+
+    f.write("--- Temps d'execution ---\n")
+    f.write(f"Simulation reelle (FD) : {time_phys:.6f} s\n")
+    f.write(f"Rollout predit (NN)    : {time_pred:.6f} s\n")
+    f.write(f"Ratio NN / FD          : {time_pred/time_phys:.2f}\n\n")
+
+    f.write("--- Erreurs du rollout ---\n")
+    f.write(f"L2 relative  : finale = {l2_final:.4e}  |  max = {l2_max:.4e}\n")
+    f.write(f"Linf absolue : finale = {linf_final:.4e}  |  max = {linf_max:.4e}\n")
+    f.write(f"sMAPE (%)    : finale = {smape_final:.3f}  |  max = {smape_max:.3f}\n")
+
+print(f"Resume sauvegarde : {OUTPUT_DIR / 'resume.txt'}")

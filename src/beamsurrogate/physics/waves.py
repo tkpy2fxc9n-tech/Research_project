@@ -58,6 +58,74 @@ def rest_value(p: dict, t: float) -> float:
 
 
 # ---------------------------------------------------------------------------
+# sine_pulse / triangular / sawtooth / square -- SINGLE isolated pulses (one
+# arch/tooth/ramp/block), not repeating oscillations: same (A, sigma) param
+# space as gaussian (reuses sample_gaussian_params), and the same t0=4*sigma
+# "already ~0 by t=0" convention, generalized to a full support window
+# T=8*sigma (twice gaussian's own t0, since gaussian's tails past t0+4sigma
+# are already negligible -- these shapes instead go EXACTLY to 0 outside
+# [0, T], since unlike a gaussian tail they have no natural decay).
+#
+# Not the same thing as sinusoid/triangular/sawtooth/square (removed) at the
+# top of this module used to be: those were continuous, phase-random
+# oscillations reusing sample_sinusoid_params -- correct for the pre-existing
+# "sinusoid" family used by data/generate.py's "complex" profile (kept
+# as-is, unchanged, below), but wrong for what data/generate.py's "medium"
+# profile actually wants (one traveling pulse per shape, like gaussian) --
+# a random phase there almost never lands near a zero-crossing, and
+# data/generate.py's run_simulation loop always hardcodes step 0's stored
+# value to 0 regardless of the family's own t=0 value, so a mid-cycle
+# start produced a real, physically-impossible jump at t=0.
+def _pulse_window(t: float, sigma: float) -> tuple[float, float]:
+    return t, 8.0 * sigma
+
+
+def sine_pulse_value(p: dict, t: float) -> float:
+    t_, T = _pulse_window(t, p["sigma"])
+    if not (0.0 <= t_ <= T):
+        return 0.0
+    return p["A"] * np.sin(2.0 * np.pi * t_ / T)
+
+
+def triangular_value(p: dict, t: float) -> float:
+    t_, T = _pulse_window(t, p["sigma"])
+    if not (0.0 <= t_ <= T):
+        return 0.0
+    return p["A"] * (2.0 / np.pi) * np.arcsin(np.sin(2.0 * np.pi * t_ / T))
+
+
+def sawtooth_value(p: dict, t: float) -> float:
+    # Asymmetric on purpose (the defining sawtooth trait): slow linear rise
+    # over most of the window, fast linear fall back to 0 -- both anchored
+    # at 0 at the window edges, unlike a naive theta/pi-1 sawtooth (which
+    # starts at -A and ends at +A, i.e. discontinuous against the silence
+    # outside the window).
+    t_, T = _pulse_window(t, p["sigma"])
+    if not (0.0 <= t_ <= T):
+        return 0.0
+    rise_frac = 0.85
+    t_peak = rise_frac * T
+    if t_ <= t_peak:
+        return p["A"] * (t_ / t_peak)
+    return p["A"] * (1.0 - (t_ - t_peak) / (T - t_peak))
+
+
+def square_value(p: dict, t: float) -> float:
+    # Single rectangular pulse: tanh-smoothed rise/fall (same technique as
+    # the "shock" family below) instead of a true discontinuity, which the
+    # explicit leapfrog scheme handles poorly. Plateau spans the middle
+    # half of the window; smoothing width tau is small enough that both
+    # transitions are numerically ~0 at t=0 and ~0 again at t=T.
+    t_, T = _pulse_window(t, p["sigma"])
+    if not (0.0 <= t_ <= T):
+        return 0.0
+    tau = 0.05 * T
+    rise = 0.5 * (1.0 + np.tanh((t_ - 0.25 * T) / tau))
+    fall = 0.5 * (1.0 - np.tanh((t_ - 0.75 * T) / tau))
+    return p["A"] * rise * fall
+
+
+# ---------------------------------------------------------------------------
 # fourier (random Fourier sums, 4-8 tones)
 # ---------------------------------------------------------------------------
 def sample_fourier_params(rng, cfg) -> dict:
@@ -147,6 +215,10 @@ BC_WAVEFORMS = {
     "shock": (sample_shock_params, shock_value),
     "filtered_random": (sample_filtered_random_params, filtered_random_value),
     "table": (_no_sampler, filtered_random_value),
+    "sine_pulse": (sample_gaussian_params, sine_pulse_value),
+    "triangular": (sample_gaussian_params, triangular_value),
+    "sawtooth": (sample_gaussian_params, sawtooth_value),
+    "square": (sample_gaussian_params, square_value),
 }
 
 
@@ -161,7 +233,7 @@ def flip(family: str, params: dict) -> dict:
         q = dict(params)
         q["phase"] = [ph + np.pi for ph in params["phase"]]
         return q
-    if family in ("gaussian", "shock"):
+    if family in ("gaussian", "shock", "sine_pulse", "triangular", "sawtooth", "square"):
         q = dict(params)
         q["A"] = -params["A"]
         return q

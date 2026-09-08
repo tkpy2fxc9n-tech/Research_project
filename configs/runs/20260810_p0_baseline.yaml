@@ -1,4 +1,0 @@
-inherit: base
-run_id: 20260810_p0_baseline
-phase: 0
-hypothesis: null   # this run IS the reference point, not itself a hypothesis test

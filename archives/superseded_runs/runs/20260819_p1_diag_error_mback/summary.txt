@@ -1,0 +1,6 @@
+p1_diag_error_mback (phase 1, H2) -- max rollout error vs M_BACK
+(curves truncated to t<=4.92 -- see T_CUTOFF comment in this script)
+
+M_BACK=1 (source: p1_mback1): final err_max=3.2586e-03  peak err_max=6.6888e-03
+M_BACK=2 (reference) (source: p2_pushforward): final err_max=3.8150e-04  peak err_max=3.8150e-04
+M_BACK=3 (source: p1_mback3): final err_max=4.5429e-04  peak err_max=4.5429e-04

@@ -1,0 +1,21 @@
+Lattice: 43 nodes, 94 rods (9 fixed, 3 driven).
+Free-node degrees present: [1, 2, 3, 5, 6]
+Recomputing norm_stats from a 200-trajectory subsample of medium_bidir...
+Loaded 200 trajectories from /home/aph25/Code_GH/data/beam_dataset_medium_bidir.h5
+Split distribution (from dataset):
+  train :  181 simulations (90.5 %)
+  val   :   10 simulations (5.0 %)
+  test  :    9 simulations (4.5 %)
+Running FD reference...
+FD reference done: 333 frames.
+Running NN surrogate...
+NN rollout done: 330 frames covering 10.0 s.
+Cached raw frames to p17_dataset_medium_assembly_rectangular_p7_dataset_medium_bidir_frames.npz
+Peak |u| over the whole lattice -- FD=0.00664  NN=118244008.00000  ratio NN/FD=17799870464.000
+Error field: 330 frames, max |FD-NN| = 118244008.00000
+Error curves over 9246 distinct nodes (94x98 rod-interior + 34 lattice, 9 clamped excluded)
+Saved p17_dataset_medium_assembly_rectangular_p7_dataset_medium_bidir_error_max.png
+Saved p17_dataset_medium_assembly_rectangular_p7_dataset_medium_bidir_error_mean.png
+Saved p17_dataset_medium_assembly_rectangular_p7_dataset_medium_bidir_fd_2d.gif
+Saved p17_dataset_medium_assembly_rectangular_p7_dataset_medium_bidir_nn_2d.gif
+Saved p17_dataset_medium_assembly_rectangular_p7_dataset_medium_bidir_err_2d.gif

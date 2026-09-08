@@ -1,0 +1,8 @@
+p17 rectangular assembly -- family sweep over held-out test trajectories
+mean +/- std of relative mean |FD-NN| error (%), per model per family (d = count that diverged, excluded from the mean/std)
+
+model                                                  gaussian          sawtooth        sine_pulse            square        triangular
+p7_dataset_medium_pinn_0.01                         2.92+/-1.21       7.04+/-2.21       6.61+/-4.82   6.82+/-3.24(1d)       6.17+/-3.28
+p7_medium                                       4.92+/-1.50(2d)   8.66+/-1.98(7d)  6.28+/-3.20(14d)  6.69+/-1.88(10d)  8.30+/-3.23(16d)
+p7_medium_arch_256_128_32_pinn_0.01             7.74+/-2.60(9d)  11.41+/-0.31(9d)  4.71+/-1.64(18d)  8.11+/-0.47(13d)  2.48+/-0.00(23d)
+p7_medium_ut                                    3.41+/-0.92(1d)       7.61+/-1.86       4.77+/-1.10       6.59+/-1.59       5.09+/-1.42

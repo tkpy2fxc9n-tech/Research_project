@@ -1,0 +1,7 @@
+p1_diag_error_ndt (phase 1, hypothesis=None) -- max rollout error vs ndt
+(curves truncated to t<=4.9 -- see T_CUTOFF comment in this script)
+
+ndt=2 (source: p1_ndt2): final err_max=5.9501e-04  peak err_max=7.2324e-04
+ndt=3 (reference) (source: p2_pushforward): final err_max=3.4947e-04  peak err_max=3.4947e-04
+ndt=4 (source: p1_ndt4): final err_max=9.0879e-04  peak err_max=9.2220e-04
+ndt=5 (source: p1_ndt5): final err_max=2.6919e-03  peak err_max=2.7064e-03

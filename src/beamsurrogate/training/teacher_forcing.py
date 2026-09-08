@@ -2,7 +2,7 @@
 # from a real ground-truth M_BACK window, backpropagates the averaged error,
 # steps -- no autoregressive rollout, no pushforward. Ported from
 # Beam_surrogate_model/training/code/commun.py's `train_model`. Input-noise
-# augmentation (cfg.NOISE_STD, H8) was already active here in the source
+# augmentation (cfg.NOISE_STD, phase 10) was already active here in the source
 # project despite a stale comment claiming otherwise -- kept, not
 # reintroduced.
 from __future__ import annotations
@@ -58,7 +58,7 @@ def run(model, train_loader, X_val, y_val, cfg, model_path: Path, patience: int 
         model.eval()
         with torch.no_grad():
             pred_val = model(torch.tensor(X_val)).numpy()
-        val_loss = ((pred_val - y_val) ** 2).mean()
+        val_loss = float(((pred_val - y_val) ** 2).mean())
         scheduler.step(val_loss)
 
         train_history.append(train_loss)
@@ -87,19 +87,28 @@ def run(model, train_loader, X_val, y_val, cfg, model_path: Path, patience: int 
     return TrainResult(train_history, val_history, best_val, train_time_s, n_params)
 
 
-def evaluate_one_step(model, df_test, INPUTS, OUTPUTS, norm_stats) -> dict:
+def evaluate_one_step(model, df_test, INPUTS, OUTPUTS, norm_stats) -> tuple[dict, np.ndarray, np.ndarray]:
+    # Returns the per-column {mse_norm, r2} dict alongside the physical
+    # (denormalized) true/predicted arrays -- the latter two only used for
+    # plots.plot_one_step_predictions, kept out of `metrics` (which gets
+    # written verbatim to metrics.json).
     from ..data.norm import normalize_array
 
     X_new = normalize_array(df_test[INPUTS].values, INPUTS, norm_stats)
     y_true_n = normalize_array(df_test[OUTPUTS].values, OUTPUTS, norm_stats)
+    y_true = df_test[OUTPUTS].values
 
     model.eval()
     with torch.no_grad():
         y_pred_n = model(torch.tensor(X_new)).numpy()
+
+    mu_out = norm_stats.loc[OUTPUTS, "mean"].values
+    sd_out = norm_stats.loc[OUTPUTS, "std"].values
+    y_pred = y_pred_n * sd_out + mu_out
 
     metrics = {}
     for i, col in enumerate(OUTPUTS):
         mse_norm = ((y_pred_n[:, i] - y_true_n[:, i]) ** 2).mean()
         r2 = 1 - mse_norm / y_true_n[:, i].var()
         metrics[col] = {"mse_norm": float(mse_norm), "r2": float(r2)}
-    return metrics
+    return metrics, y_true, y_pred

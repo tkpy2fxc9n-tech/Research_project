@@ -1,0 +1,18 @@
+p10_analysis -- rollout stabilisation strategies (5/8 runs available)
+
+Strategy                                      E_short          P_thr_5%                   E_max       T_max_5%      T_max_10%
+-----------------------------   ---------------------   ---------------   ---------------------   ------------   ------------
+none (bias on (default))        1.77e-05 +/- 2.41e-05   58.8% +/- 18.1%   9.73e-04 +/- 4.97e-04   2.10s (100%)   2.49s (100%)
+none (bias off)                 2.47e-05 +/- 2.93e-05   59.1% +/- 24.6%   7.03e-04 +/- 5.35e-04   1.41s (100%)    2.94s (99%)
+noise (bias on (default))       2.56e-05 +/- 3.84e-05   63.8% +/- 18.0%   7.00e-04 +/- 5.55e-04   1.29s (100%)    2.70s (97%)
+noise (bias off)                1.95e-05 +/- 2.58e-05   67.0% +/- 13.1%   1.22e-03 +/- 6.35e-04   1.35s (100%)   2.40s (100%)
+laplacian (bias on (default))   8.55e-05 +/- 8.27e-05    82.8% +/- 9.2%   3.30e-03 +/- 3.98e-03   0.87s (100%)   1.05s (100%)
+laplacian (bias off)                               --                --                      --             --             --
+both (bias on (default))                           --                --                      --             --             --
+both (bias off)                                    --                --                      --             --             --
+
+E_short  : mean RMSE over the first 50 rollout steps (short-horizon error). Lower is better.
+P_thr_5%: % of rollout timesteps where error exceeds 5% of reference amplitude -- a BADNESS fraction. Lower is better.
+E_max    : peak max absolute error over the rollout. Lower is better.
+T_max_*  : first time the WORST-NODE error crosses the 5%/10% threshold. Higher is better (capped at the rollout horizon).
+(mean +/- std / median (%reached) across N=99 held-out test trajectories)

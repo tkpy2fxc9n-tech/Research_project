@@ -1,0 +1,61 @@
+=== beamsurrogate [run] run_id=p2_feat_u_ut model=mlp regime=pushforward stabilizer=none dataset=simple features=['U', 'Ut'] ===
+[mem] start: 0.58 Go
+Loaded 2000 trajectories from /home/aph25/Code_GH/data/beam_dataset_simple.h5
+Split distribution (from dataset):
+  train : 1817 simulations (90.8 %)
+  val   :   84 simulations (4.2 %)
+  test  :   99 simulations (5.0 %)
+[mem] after load_hdf5_dataset: 38.08 Go
+[mem] after compute_norm_stats: 38.08 Go
+MLP(
+  (net): Sequential(
+    (0): Linear(in_features=92, out_features=512, bias=True)
+    (1): GELU(approximate='none')
+    (2): Linear(in_features=512, out_features=256, bias=True)
+    (3): GELU(approximate='none')
+    (4): Linear(in_features=256, out_features=64, bias=True)
+    (5): GELU(approximate='none')
+    (6): Linear(in_features=64, out_features=3, bias=True)
+  )
+)
+Parameters: 195,587
+[mem] after make_dataloaders: 72.40 Go
+[mem] after trimming df to test split: 37.28 Go
+Epoch    1/100  --  data: 0.0075  |  pushforward: 0.2804  |  physics: 0.0000  |  comparable loss (val): 0.0113
+Epoch    2/100  --  data: 0.0040  |  pushforward: 0.0987  |  physics: 0.0000  |  comparable loss (val): 0.0598
+Epoch    3/100  --  data: 0.0036  |  pushforward: 0.0736  |  physics: 0.0000  |  comparable loss (val): 0.0456
+Epoch    4/100  --  data: 0.0038  |  pushforward: 0.0672  |  physics: 0.0000  |  comparable loss (val): 0.1065
+Epoch    5/100  --  data: 0.0038  |  pushforward: 0.0599  |  physics: 0.0000  |  comparable loss (val): 0.1322
+Epoch    6/100  --  data: 0.0034  |  pushforward: 0.0497  |  physics: 0.0000  |  comparable loss (val): 0.0763
+Epoch    7/100  --  data: 0.0031  |  pushforward: 0.0437  |  physics: 0.0000  |  comparable loss (val): 0.0115
+Epoch    8/100  --  data: 0.0029  |  pushforward: 0.0393  |  physics: 0.0000  |  comparable loss (val): 0.0255
+Epoch    9/100  --  data: 0.0025  |  pushforward: 0.0341  |  physics: 0.0000  |  comparable loss (val): 0.0304
+Epoch   10/100  --  data: 0.0027  |  pushforward: 0.0364  |  physics: 0.0000  |  comparable loss (val): 0.0174
+Epoch   11/100  --  data: 0.0024  |  pushforward: 0.0317  |  physics: 0.0000  |  comparable loss (val): 0.0254
+Epoch   12/100  --  data: 0.0024  |  pushforward: 0.0317  |  physics: 0.0000  |  comparable loss (val): 0.0217
+Epoch   13/100  --  data: 0.0022  |  pushforward: 0.0292  |  physics: 0.0000  |  comparable loss (val): 0.0250
+Epoch   14/100  --  data: 0.0022  |  pushforward: 0.0284  |  physics: 0.0000  |  comparable loss (val): 0.0149
+Epoch   15/100  --  data: 0.0020  |  pushforward: 0.0269  |  physics: 0.0000  |  comparable loss (val): 0.0054
+Epoch   16/100  --  data: 0.0020  |  pushforward: 0.0266  |  physics: 0.0000  |  comparable loss (val): 0.0023
+Epoch   17/100  --  data: 0.0021  |  pushforward: 0.0264  |  physics: 0.0000  |  comparable loss (val): 0.0094
+Epoch   18/100  --  data: 0.0019  |  pushforward: 0.0248  |  physics: 0.0000  |  comparable loss (val): 0.0119
+Epoch   19/100  --  data: 0.0019  |  pushforward: 0.0239  |  physics: 0.0000  |  comparable loss (val): 0.0076
+Epoch   20/100  --  data: 0.0019  |  pushforward: 0.0237  |  physics: 0.0000  |  comparable loss (val): 0.0219
+Epoch   21/100  --  data: 0.0019  |  pushforward: 0.0248  |  physics: 0.0000  |  comparable loss (val): 0.0171
+Epoch   22/100  --  data: 0.0019  |  pushforward: 0.0248  |  physics: 0.0000  |  comparable loss (val): 0.0125
+Epoch   23/100  --  data: 0.0017  |  pushforward: 0.0219  |  physics: 0.0000  |  comparable loss (val): 0.0108
+Epoch   24/100  --  data: 0.0017  |  pushforward: 0.0213  |  physics: 0.0000  |  comparable loss (val): 0.0089
+Epoch   25/100  --  data: 0.0016  |  pushforward: 0.0207  |  physics: 0.0000  |  comparable loss (val): 0.0209
+Epoch   26/100  --  data: 0.0015  |  pushforward: 0.0187  |  physics: 0.0000  |  comparable loss (val): 0.0160
+Epoch   27/100  --  data: 0.0014  |  pushforward: 0.0178  |  physics: 0.0000  |  comparable loss (val): 0.0086
+Epoch   28/100  --  data: 0.0016  |  pushforward: 0.0199  |  physics: 0.0000  |  comparable loss (val): 0.0078
+Epoch   29/100  --  data: 0.0015  |  pushforward: 0.0193  |  physics: 0.0000  |  comparable loss (val): 0.0194
+Epoch   30/100  --  data: 0.0015  |  pushforward: 0.0180  |  physics: 0.0000  |  comparable loss (val): 0.0111
+Epoch   31/100  --  data: 0.0015  |  pushforward: 0.0183  |  physics: 0.0000  |  comparable loss (val): 0.0049
+Early stopping at epoch 31: val loss hasn't improved for 15 epochs (best=0.002325).
+Best model reloaded -- minimum comparable loss (val): 0.002325
+[mem] after training: 37.56 Go
+[mem] after evaluate_one_step: 37.68 Go
+[mem] after rollout + benchmark: 37.68 Go
+Done -- outputs in runs/p2/p2_feat_u_ut
+RUN DONE: runs/p2/p2_feat_u_ut/config.yaml

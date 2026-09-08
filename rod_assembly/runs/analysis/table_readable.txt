@@ -1,0 +1,9 @@
+p17 rectangular assembly -- rollout error metrics (Table 17 / tab:assembly_metrics)
+Baseline: p7_dataset_medium_arch_256_128_32_pinn_0.01
+
+Configuration                                            T_5%^max T_10%^max       E_max  DeltaE_max   t_Emax  P_thr%
+Retained config (arch [256,128,32], PINN $\lambda=0.01$)     1.29s     2.40s    0.009342        1.00    9.99s   78.8%
+Reference architecture, no PINN                             2.31s     2.40s    0.006862        0.73    9.99s   77.9%
+Reference architecture, $+\dot u$ feature                   2.31s     2.46s    0.003037        0.33    9.69s   77.9%
+Reference architecture, $+\dot u$ feature, PINN             1.59s     2.52s    0.003922        0.42    9.99s   80.9%
+Reference architecture, bidirectional dataset (C)           1.35s     1.50s  311.745819    33371.06    9.99s   87.6%

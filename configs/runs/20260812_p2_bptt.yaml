@@ -1,5 +1,0 @@
-inherit: base
-run_id: 20260812_p2_bptt
-phase: 2
-hypothesis: H5
-regime: bptt

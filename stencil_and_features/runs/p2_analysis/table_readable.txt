@@ -1,0 +1,31 @@
+Configuration                          E_short          P_thr_5%                   E_max       T_max_5%      T_max_10%      T_mean_5%     T_mean_10%
+----------------------   ---------------------   ---------------   ---------------------   ------------   ------------   ------------   ------------
+
+Temporal input depth
+M_BACK = 1               5.73e-05 +/- 7.36e-05   80.2% +/- 11.0%   3.77e-03 +/- 1.23e-03   0.84s (100%)   1.11s (100%)   1.92s (100%)    2.40s (99%)
+M_BACK = 2 (reference)   1.73e-05 +/- 2.44e-05   53.9% +/- 21.9%   5.64e-04 +/- 4.62e-04   1.41s (100%)    3.00s (89%)    4.26s (35%)     4.80s (8%)
+M_BACK = 3               1.50e-05 +/- 2.43e-05   55.5% +/- 20.5%   5.84e-04 +/- 5.07e-04   1.98s (100%)    2.97s (85%)    4.35s (48%)     4.89s (7%)
+
+Prediction horizon and temporal subsampling
+N_FWD = 1                2.17e-05 +/- 3.24e-05   60.3% +/- 17.3%   9.98e-04 +/- 6.06e-04   2.16s (100%)   2.46s (100%)    3.39s (99%)    4.19s (32%)
+N_FWD = 2                2.48e-05 +/- 3.47e-05   68.9% +/- 13.7%   1.07e-03 +/- 5.90e-04   1.44s (100%)   2.16s (100%)    3.42s (96%)    3.84s (45%)
+N_FWD = 3 (reference)    1.73e-05 +/- 2.44e-05   53.9% +/- 21.9%   5.64e-04 +/- 4.62e-04   1.41s (100%)    3.00s (89%)    4.26s (35%)     4.80s (8%)
+N_FWD = 4                2.86e-05 +/- 4.58e-05   67.8% +/- 17.9%   8.62e-04 +/- 5.66e-04   1.23s (100%)   2.46s (100%)    3.42s (78%)    3.90s (29%)
+N_FWD = 5                5.25e-05 +/- 8.40e-05   75.5% +/- 14.6%   3.27e-03 +/- 1.78e-03   0.96s (100%)   1.56s (100%)   2.55s (100%)    3.18s (96%)
+n_dt = 2                 1.08e-05 +/- 1.75e-05   69.1% +/- 13.1%   1.04e-03 +/- 5.32e-04   1.72s (100%)   2.20s (100%)    3.08s (90%)    3.78s (45%)
+n_dt = 3 (reference)     1.73e-05 +/- 2.44e-05   53.9% +/- 21.9%   5.64e-04 +/- 4.62e-04   1.41s (100%)    3.00s (89%)    4.26s (35%)     4.80s (8%)
+n_dt = 4                 3.50e-05 +/- 5.48e-05   62.7% +/- 19.3%   8.05e-04 +/- 6.00e-04   2.00s (100%)    2.86s (97%)    3.56s (56%)    3.84s (17%)
+n_dt = 5                 2.49e-04 +/- 2.22e-04    82.2% +/- 9.9%   4.36e-03 +/- 2.71e-03   0.90s (100%)   1.15s (100%)   1.50s (100%)   2.00s (100%)
+
+Input features
+{u} (reference)          1.73e-05 +/- 2.44e-05   53.9% +/- 21.9%   5.64e-04 +/- 4.62e-04   1.41s (100%)    3.00s (89%)    4.26s (35%)     4.80s (8%)
+{u, u_dot}               1.39e-05 +/- 2.28e-05   52.2% +/- 20.3%   6.85e-04 +/- 4.88e-04   2.46s (100%)   4.08s (100%)    4.44s (62%)     4.84s (4%)
+{u_dot, u_xx}            1.07e-05 +/- 1.68e-05   46.2% +/- 22.5%   4.95e-04 +/- 4.44e-04   2.76s (100%)    3.24s (66%)    3.51s (31%)     4.79s (4%)
+{u, u_dot, u_xx}         1.18e-05 +/- 2.19e-05   51.2% +/- 19.6%   7.66e-04 +/- 5.63e-04   2.67s (100%)   3.03s (100%)    4.26s (62%)     4.79s (2%)
+
+E_short  : mean RMSE over the first 50 rollout steps (short-horizon error). Lower is better.
+P_thr_5%: % of rollout timesteps where error exceeds 5% of reference amplitude -- a BADNESS fraction. Lower is better.
+E_max    : peak max absolute error over the rollout. Lower is better.
+T_max_*  : first time the WORST-NODE error crosses the 5%/10% threshold. Higher is better (capped at the rollout horizon).
+T_mean_* : first time the BEAM-MEAN error crosses the 5%/10% threshold. Higher is better (capped at the rollout horizon).
+(mean +/- std / median (%reached) across N=99 held-out test trajectories)

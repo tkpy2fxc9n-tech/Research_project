@@ -1,0 +1,109 @@
+=== beamsurrogate [run] run_id=p6_dataset_medium_bidir model=mlp regime=pushforward stabilizer=none dataset=medium_bidir features=['U'] ===
+[mem] start: 0.57 Go
+Loaded 2000 trajectories from /home/aph25/Code_GH/data/beam_dataset_medium_bidir.h5
+Split distribution (from dataset):
+  train : 1789 simulations (89.5 %)
+  val   :   95 simulations (4.8 %)
+  test  :  116 simulations (5.8 %)
+[mem] after load_hdf5_dataset: 28.96 Go
+[mem] after compute_norm_stats: 28.96 Go
+MLP(
+  (net): Sequential(
+    (0): Linear(in_features=69, out_features=256, bias=True)
+    (1): GELU(approximate='none')
+    (2): Linear(in_features=256, out_features=128, bias=True)
+    (3): GELU(approximate='none')
+    (4): Linear(in_features=128, out_features=32, bias=True)
+    (5): GELU(approximate='none')
+    (6): Linear(in_features=32, out_features=2, bias=True)
+  )
+)
+Parameters: 55,010
+[mem] after make_dataloaders: 54.36 Go
+[mem] after trimming df to test split: 28.16 Go
+Epoch    1/80  --  data: 0.0436  |  pushforward: 1.3304  |  physics: 0.1838  |  comparable loss (val): 0.0603
+Epoch    2/80  --  data: 0.0243  |  pushforward: 0.7371  |  physics: 0.0607  |  comparable loss (val): 0.2699
+Epoch    3/80  --  data: 0.0216  |  pushforward: 0.5882  |  physics: 0.0579  |  comparable loss (val): 0.2234
+Epoch    4/80  --  data: 0.0171  |  pushforward: 0.4399  |  physics: 0.0449  |  comparable loss (val): 0.0652
+Epoch    5/80  --  data: 0.0141  |  pushforward: 0.3449  |  physics: 0.0366  |  comparable loss (val): 0.1210
+Epoch    6/80  --  data: 0.0120  |  pushforward: 0.2796  |  physics: 0.0332  |  comparable loss (val): 0.0653
+Epoch    7/80  --  data: 0.0112  |  pushforward: 0.2564  |  physics: 0.0306  |  comparable loss (val): 0.0471
+Epoch    8/80  --  data: 0.0098  |  pushforward: 0.2058  |  physics: 0.0263  |  comparable loss (val): 0.1406
+Epoch    9/80  --  data: 0.0098  |  pushforward: 0.2159  |  physics: 0.0267  |  comparable loss (val): 0.0303
+Epoch   10/80  --  data: 0.0088  |  pushforward: 0.1860  |  physics: 0.0248  |  comparable loss (val): 0.0814
+Epoch   11/80  --  data: 0.0079  |  pushforward: 0.1553  |  physics: 0.0233  |  comparable loss (val): 0.0317
+Epoch   12/80  --  data: 0.0077  |  pushforward: 0.1513  |  physics: 0.0225  |  comparable loss (val): 0.1218
+Epoch   13/80  --  data: 0.0078  |  pushforward: 0.1641  |  physics: 0.0226  |  comparable loss (val): 0.0242
+Epoch   14/80  --  data: 0.0071  |  pushforward: 0.1389  |  physics: 0.0210  |  comparable loss (val): 0.1512
+Epoch   15/80  --  data: 0.0071  |  pushforward: 0.1321  |  physics: 0.0211  |  comparable loss (val): 0.0483
+Epoch   16/80  --  data: 0.0063  |  pushforward: 0.1177  |  physics: 0.0190  |  comparable loss (val): 0.0419
+Epoch   17/80  --  data: 0.0066  |  pushforward: 0.1327  |  physics: 0.0198  |  comparable loss (val): 0.0233
+Epoch   18/80  --  data: 0.0062  |  pushforward: 0.1205  |  physics: 0.0190  |  comparable loss (val): 0.1765
+Epoch   19/80  --  data: 0.0062  |  pushforward: 0.1162  |  physics: 0.0181  |  comparable loss (val): 0.0479
+Epoch   20/80  --  data: 0.0053  |  pushforward: 0.0933  |  physics: 0.0167  |  comparable loss (val): 0.2420
+Epoch   21/80  --  data: 0.0053  |  pushforward: 0.0925  |  physics: 0.0166  |  comparable loss (val): 0.2098
+Epoch   22/80  --  data: 0.0060  |  pushforward: 0.1087  |  physics: 0.0182  |  comparable loss (val): 0.0154
+Epoch   23/80  --  data: 0.0052  |  pushforward: 0.0900  |  physics: 0.0169  |  comparable loss (val): 0.0859
+Epoch   24/80  --  data: 0.0057  |  pushforward: 0.1087  |  physics: 0.0177  |  comparable loss (val): 0.0284
+Epoch   25/80  --  data: 0.0047  |  pushforward: 0.0853  |  physics: 0.0155  |  comparable loss (val): 0.1498
+Epoch   26/80  --  data: 0.0054  |  pushforward: 0.1022  |  physics: 0.0174  |  comparable loss (val): 0.0821
+Epoch   27/80  --  data: 0.0046  |  pushforward: 0.0815  |  physics: 0.0159  |  comparable loss (val): 0.0662
+Epoch   28/80  --  data: 0.0047  |  pushforward: 0.0854  |  physics: 0.0156  |  comparable loss (val): 0.0563
+Epoch   29/80  --  data: 0.0060  |  pushforward: 0.1242  |  physics: 0.0188  |  comparable loss (val): 0.1392
+Epoch   30/80  --  data: 0.0047  |  pushforward: 0.0893  |  physics: 0.0156  |  comparable loss (val): 0.0406
+Epoch   31/80  --  data: 0.0042  |  pushforward: 0.0720  |  physics: 0.0142  |  comparable loss (val): 0.0190
+Epoch   32/80  --  data: 0.0046  |  pushforward: 0.0904  |  physics: 0.0155  |  comparable loss (val): 0.1944
+Epoch   33/80  --  data: 0.0049  |  pushforward: 0.0912  |  physics: 0.0161  |  comparable loss (val): 0.0305
+Epoch   34/80  --  data: 0.0044  |  pushforward: 0.0743  |  physics: 0.0150  |  comparable loss (val): 0.1909
+Epoch   35/80  --  data: 0.0041  |  pushforward: 0.0738  |  physics: 0.0145  |  comparable loss (val): 0.0236
+Epoch   36/80  --  data: 0.0046  |  pushforward: 0.0848  |  physics: 0.0159  |  comparable loss (val): 0.0113
+Epoch   37/80  --  data: 0.0045  |  pushforward: 0.0804  |  physics: 0.0151  |  comparable loss (val): 0.0241
+Epoch   38/80  --  data: 0.0043  |  pushforward: 0.0756  |  physics: 0.0147  |  comparable loss (val): 0.0209
+Epoch   39/80  --  data: 0.0044  |  pushforward: 0.0837  |  physics: 0.0148  |  comparable loss (val): 0.0340
+Epoch   40/80  --  data: 0.0040  |  pushforward: 0.0749  |  physics: 0.0144  |  comparable loss (val): 0.0729
+Epoch   41/80  --  data: 0.0048  |  pushforward: 0.0847  |  physics: 0.0163  |  comparable loss (val): 0.0964
+Epoch   42/80  --  data: 0.0046  |  pushforward: 0.0894  |  physics: 0.0157  |  comparable loss (val): 0.3762
+Epoch   43/80  --  data: 0.0039  |  pushforward: 0.0639  |  physics: 0.0135  |  comparable loss (val): 0.0209
+Epoch   44/80  --  data: 0.0037  |  pushforward: 0.0670  |  physics: 0.0134  |  comparable loss (val): 0.0288
+Epoch   45/80  --  data: 0.0039  |  pushforward: 0.0689  |  physics: 0.0144  |  comparable loss (val): 0.0176
+Epoch   46/80  --  data: 0.0037  |  pushforward: 0.0676  |  physics: 0.0139  |  comparable loss (val): 0.0464
+Epoch   47/80  --  data: 0.0040  |  pushforward: 0.0739  |  physics: 0.0136  |  comparable loss (val): 0.0225
+Epoch   48/80  --  data: 0.0043  |  pushforward: 0.0836  |  physics: 0.0161  |  comparable loss (val): 0.1677
+Epoch   49/80  --  data: 0.0038  |  pushforward: 0.0642  |  physics: 0.0131  |  comparable loss (val): 0.0423
+Epoch   50/80  --  data: 0.0037  |  pushforward: 0.0621  |  physics: 0.0132  |  comparable loss (val): 0.0261
+Epoch   51/80  --  data: 0.0034  |  pushforward: 0.0572  |  physics: 0.0124  |  comparable loss (val): 0.0294
+Epoch   52/80  --  data: 0.0037  |  pushforward: 0.0660  |  physics: 0.0129  |  comparable loss (val): 0.0154
+Epoch   53/80  --  data: 0.0036  |  pushforward: 0.0636  |  physics: 0.0124  |  comparable loss (val): 0.0525
+Epoch   54/80  --  data: 0.0035  |  pushforward: 0.0560  |  physics: 0.0121  |  comparable loss (val): 0.0379
+Epoch   55/80  --  data: 0.0043  |  pushforward: 0.0638  |  physics: 0.0138  |  comparable loss (val): 0.0207
+Epoch   56/80  --  data: 0.0036  |  pushforward: 0.0616  |  physics: 0.0131  |  comparable loss (val): 0.0119
+Epoch   57/80  --  data: 0.0035  |  pushforward: 0.0604  |  physics: 0.0126  |  comparable loss (val): 0.0164
+Epoch   58/80  --  data: 0.0033  |  pushforward: 0.0515  |  physics: 0.0113  |  comparable loss (val): 0.0410
+Epoch   59/80  --  data: 0.0034  |  pushforward: 0.0571  |  physics: 0.0121  |  comparable loss (val): 0.0515
+Epoch   60/80  --  data: 0.0034  |  pushforward: 0.0566  |  physics: 0.0121  |  comparable loss (val): 0.0523
+Epoch   61/80  --  data: 0.0034  |  pushforward: 0.0592  |  physics: 0.0125  |  comparable loss (val): 0.2344
+Epoch   62/80  --  data: 0.0033  |  pushforward: 0.0489  |  physics: 0.0111  |  comparable loss (val): 0.0099
+Epoch   63/80  --  data: 0.0032  |  pushforward: 0.0547  |  physics: 0.0117  |  comparable loss (val): 0.0443
+Epoch   64/80  --  data: 0.0032  |  pushforward: 0.0557  |  physics: 0.0113  |  comparable loss (val): 0.0257
+Epoch   65/80  --  data: 0.0030  |  pushforward: 0.0457  |  physics: 0.0110  |  comparable loss (val): 0.0226
+Epoch   66/80  --  data: 0.0033  |  pushforward: 0.0540  |  physics: 0.0123  |  comparable loss (val): 0.0726
+Epoch   67/80  --  data: 0.0029  |  pushforward: 0.0451  |  physics: 0.0108  |  comparable loss (val): 0.0479
+Epoch   68/80  --  data: 0.0032  |  pushforward: 0.0535  |  physics: 0.0113  |  comparable loss (val): 0.0639
+Epoch   69/80  --  data: 0.0029  |  pushforward: 0.0440  |  physics: 0.0108  |  comparable loss (val): 0.0611
+Epoch   70/80  --  data: 0.0032  |  pushforward: 0.0527  |  physics: 0.0116  |  comparable loss (val): 0.1891
+Epoch   71/80  --  data: 0.0032  |  pushforward: 0.0495  |  physics: 0.0111  |  comparable loss (val): 0.0557
+Epoch   72/80  --  data: 0.0032  |  pushforward: 0.0496  |  physics: 0.0116  |  comparable loss (val): 0.0109
+Epoch   73/80  --  data: 0.0027  |  pushforward: 0.0435  |  physics: 0.0097  |  comparable loss (val): 0.0142
+Epoch   74/80  --  data: 0.0031  |  pushforward: 0.0489  |  physics: 0.0108  |  comparable loss (val): 0.0253
+Epoch   75/80  --  data: 0.0031  |  pushforward: 0.0508  |  physics: 0.0112  |  comparable loss (val): 0.3340
+Epoch   76/80  --  data: 0.0029  |  pushforward: 0.0440  |  physics: 0.0104  |  comparable loss (val): 0.2644
+Epoch   77/80  --  data: 0.0026  |  pushforward: 0.0388  |  physics: 0.0097  |  comparable loss (val): 0.0155
+Epoch   78/80  --  data: 0.0033  |  pushforward: 0.0562  |  physics: 0.0120  |  comparable loss (val): 0.0178
+Epoch   79/80  --  data: 0.0026  |  pushforward: 0.0388  |  physics: 0.0099  |  comparable loss (val): 0.0138
+Epoch   80/80  --  data: 0.0027  |  pushforward: 0.0428  |  physics: 0.0102  |  comparable loss (val): 0.1488
+Best model reloaded -- minimum comparable loss (val): 0.009928
+[mem] after training: 28.96 Go
+[mem] after evaluate_one_step: 29.06 Go
+[mem] after rollout + benchmark: 29.06 Go
+Done -- outputs in runs/p6_performance_different_datasets/p6_dataset_medium_bidir
+RUN DONE: runs/p6_performance_different_datasets/p6_dataset_medium_bidir/config.yaml

@@ -1,7 +1,0 @@
-inherit: base
-run_id: 20260810_p0_hist_deltau
-phase: 0
-hypothesis: H1
-# Dataset analysis only, no model at all -- histogram of delta_u straight
-# from the HDF5 dataset (`dataset:` below only selects WHICH dataset).
-# Same non-training status as 20260810_p0_diag_R2_vs_rollout.yaml.

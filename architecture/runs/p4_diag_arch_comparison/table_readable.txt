@@ -1,0 +1,45 @@
+# p4_diag_arch_comparison -- architecture-size ablation (10/10 runs available)
+
+fd_flops/fd_time are the ground-truth finite-difference solver's own rollout cost
+(measured independently per run -- fd_flops is identical across all 9 by construction,
+353500.0; fd_time varies only by machine noise). speedup fd/nn > 1 means the trained
+surrogate's rollout inference is faster wall-clock than just solving the FD reference.
+
+TABLE A -- Accuracy & rollout stability
+
+Architecture              Params                 E_short          P_thr_5%                   E_max           t_E_max       T_max_5%      T_max_10%      T_mean_5%     T_mean_10%
+----------------------   -------   ---------------------   ---------------   ---------------------   ---------------   ------------   ------------   ------------   ------------
+64                         4,610   4.69e-05 +/- 4.66e-05   78.3% +/- 13.1%   1.23e-03 +/- 6.53e-04   3.98s +/- 0.78s   0.93s (100%)   1.71s (100%)    2.58s (98%)    2.94s (53%)
+128                        9,218   3.97e-05 +/- 3.36e-05   78.0% +/- 12.3%   1.78e-03 +/- 1.26e-03   4.22s +/- 0.72s   0.99s (100%)   1.71s (100%)    2.43s (94%)    3.06s (64%)
+256                       18,434   3.14e-05 +/- 2.91e-05   75.8% +/- 11.7%   1.56e-03 +/- 9.02e-04   4.27s +/- 0.58s   0.99s (100%)   1.77s (100%)    2.61s (99%)    3.56s (79%)
+64+16                      5,554   1.93e-05 +/- 2.18e-05   67.2% +/- 13.5%   1.68e-03 +/- 8.75e-04   4.65s +/- 0.43s   1.77s (100%)   2.22s (100%)   2.88s (100%)    3.66s (96%)
+128+32                    13,154   1.96e-05 +/- 2.46e-05   63.3% +/- 17.8%   8.69e-04 +/- 5.23e-04   4.12s +/- 0.89s   1.83s (100%)   2.28s (100%)    3.48s (62%)    3.78s (33%)
+256+16                    22,066   1.67e-05 +/- 2.35e-05   61.5% +/- 17.5%   9.56e-04 +/- 5.92e-04   4.59s +/- 0.49s   2.04s (100%)   2.52s (100%)    3.29s (91%)    3.81s (39%)
+128+64+16                 18,290   1.40e-05 +/- 1.91e-05   58.2% +/- 17.0%   7.55e-04 +/- 5.07e-04   4.60s +/- 0.37s   1.89s (100%)    3.12s (99%)    3.99s (64%)    4.32s (15%)
+256+128+32                55,010   1.08e-05 +/- 1.89e-05   49.7% +/- 18.9%   6.22e-04 +/- 4.45e-04   4.63s +/- 0.35s   2.61s (100%)    3.46s (89%)    4.44s (58%)    4.90s (14%)
+512+256+64 (reference)   183,746   1.36e-05 +/- 1.79e-05   59.9% +/- 16.7%   9.18e-04 +/- 5.37e-04   4.60s +/- 0.34s   2.19s (100%)   2.58s (100%)   3.93s (100%)    4.62s (27%)
+linear                       140   4.60e-04 +/- 5.78e-04    84.6% +/- 7.8%   1.14e+03 +/- 1.23e+03   4.95s +/- 0.00s   0.87s (100%)   0.99s (100%)   1.17s (100%)   1.29s (100%)
+
+E_short  : mean RMSE over the first 50 rollout steps (short-horizon error). Lower is better.
+P_thr_5%: % of rollout timesteps where error exceeds 5% of reference amplitude -- a BADNESS fraction. Lower is better.
+E_max    : peak max absolute error over the rollout. Lower is better.
+t_E_max  : time at which E_max occurs.
+T_max_*  : first time the WORST-NODE error crosses the 5%/10% threshold. Higher is better (capped at the rollout horizon).
+T_mean_* : first time the BEAM-MEAN error crosses the 5%/10% threshold. Higher is better (capped at the rollout horizon).
+
+TABLE B -- Compute cost & wall-clock speed
+
+Architecture             NN FLOPs/step   NN ms/step   FD FLOPs/step   FD ms/step   Speedup (FD/NN)
+----------------------   -------------   ----------   -------------   ----------   ---------------
+64                              73.61M         40.9         353.50K         27.5             0.67x
+128                            147.23M         46.1         353.50K         36.2             0.78x
+256                            294.45M         42.8         353.50K         27.4             0.64x
+64+16                           88.65M         42.3         353.50K         27.5             0.65x
+128+32                         210.47M         49.4         353.50K         36.5             0.74x
+256+16                         353.03M         44.7         353.50K         27.4             0.61x
+128+64+16                      292.90M         46.3         353.50K         27.7             0.60x
+256+128+32                     884.39M         57.1         353.50K         36.5             0.64x
+512+256+64 (reference)           2.96G         59.8         353.50K         27.5             0.46x
+linear                           2.24M         24.0         353.50K         27.7             1.15x
+
+Speedup (FD/NN): FD time / NN time per rollout step. Above 1.00x the surrogate beats FD; below it, FD wins.
