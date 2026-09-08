@@ -12,22 +12,22 @@
 
 set -uo pipefail
 
-# --chdir ci-dessus fixe le répertoire de travail du job (et donc où logs/
-# ci-dessus se résout) AVANT même le démarrage du script -- sbatch peut donc
-# être lancé depuis training/ OU training/code/ sans que les logs se
-# retrouvent au mauvais endroit (ambiguïté corrigée le 22/07/2026).
+# The --chdir above sets the job's working directory (and therefore where the
+# logs/ path above resolves) BEFORE the script even starts -- so sbatch can be
+# launched from training/ OR training/code/ without the logs ending up in the
+# wrong place (ambiguity fixed on 2026-07-22).
 cd /home/aph25/Tests_archives/Archives/solver_gnn/training
 mkdir -p logs
 find logs -maxdepth 1 -type f ! -name "*${SLURM_JOB_ID}*" -delete
 
 PYTHON=/home/aph25/Desktop/wave_env/bin/python
 
-# Pas de pin OMP_NUM_THREADS=1 ici (contrairement à commun.job, calibré pour
-# comparer plusieurs méthodes tournant en parallèle) : ce job lance un seul
-# process, et l'entraînement du GNN profite d'un BLAS multi-thread (voir
-# torch.set_num_threads(8) dans main.py).
-# main.py vit dans code/ (plots -> training/plots/simulation_<horodatage>/,
-# modèle -> solver_gnn/model.pth, cf. PLOTS_DIR/PROJECT_DIR dans main.py).
+# No OMP_NUM_THREADS=1 pin here (unlike commun.job, which is calibrated for
+# comparing several methods running in parallel): this job launches a single
+# process, and GNN training benefits from a multi-threaded BLAS (see
+# torch.set_num_threads(8) in main.py).
+# main.py lives in code/ (plots -> training/plots/simulation_<timestamp>/,
+# model -> solver_gnn/model.pth, cf. PLOTS_DIR/PROJECT_DIR in main.py).
 time "$PYTHON" -u code/main.py --epochs 20
 
 echo "DONE"

@@ -39,6 +39,7 @@ import yaml
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT / "src"))
+sys.path.insert(0, str(REPO_ROOT / "common"))
 
 from beamsurrogate.config import Config, set_seeds  # noqa: E402
 from beamsurrogate.registry import MODELS, DATASETS  # noqa: E402
@@ -48,12 +49,23 @@ from beamsurrogate.evaluate.rollout import run_rollout, benchmark_inference  # n
 from beamsurrogate.evaluate.metrics import build_metrics  # noqa: E402
 from beamsurrogate.evaluate import plots  # noqa: E402
 from beamsurrogate.cli import _git_info, _dataset_sha256  # noqa: E402
+from run_registry import find_run_dir  # noqa: E402
+
+
+def _run_path(run_id: str) -> Path:
+    # Runs live under <phase>/runs/<run_id>/, the phase folder being named
+    # after what it does (baseline/, pinn_loss/, ...). find_run_dir searches
+    # for the id rather than rebuilding a path, so this keeps working
+    # wherever a run sits in the tree.
+    found = find_run_dir(REPO_ROOT, run_id)
+    if found is None:
+        raise SystemExit(f"no run folder found for {run_id!r}")
+    return found
 
 DATA_DIR = REPO_ROOT / "data"
-RUNS_DIR = REPO_ROOT / "runs"
 
 RUN_ID = "p6_complex_zeroshot"
-RUN_DIR = RUNS_DIR / "p6" / RUN_ID   # runs/<phase>/<run_id>/, same convention as every other run
+RUN_DIR = REPO_ROOT / "dataset_comparison" / "runs" / RUN_ID
 # TBD -- set to whichever LAMBDA_PHYSICS weight wins the p3_pinn_* (phase 3) sweep,
 # once it concludes. That run's model.pth (trained on the SIMPLE dataset) is
 # what gets evaluated zero-shot against the complex dataset here.
@@ -62,10 +74,9 @@ TARGET_DATASET = "complex"
 
 
 def _find_run_dir(run_id: str) -> Path:
-    # A run's own folder lives under runs/<phase>/<run_id>/ -- phase is the
-    # pN prefix already in run_id, never looked up separately.
-    phase = re.match(r"p\d+", run_id).group()
-    return RUNS_DIR / phase / run_id
+    # A run's own folder lives under <phase>/runs/<run_id>/, the phase folder
+    # named after what it does rather than after its number.
+    return _run_path(run_id)
 
 
 def _load_config(run_id: str) -> Config:
@@ -140,7 +151,7 @@ def main():
 
     # config.yaml (input) and results.yaml (output), same convention as every
     # other run -- never merged, no run_id key in either (the folder name,
-    # runs/p6/p6_complex_zeroshot/, is the only identity).
+    # dataset_comparison/runs/p6_complex_zeroshot/, is the only identity).
     cfg_dict = {f.name: getattr(cfg_target, f.name) for f in dataclasses.fields(cfg_target) if f.name != "run_id"}
     for k in ("HIDDEN_SIZES", "CNN_CHANNELS"):
         cfg_dict[k] = list(cfg_dict[k])

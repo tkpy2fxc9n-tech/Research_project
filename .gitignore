@@ -20,16 +20,16 @@ outputs/
 # animations (~400 MB) -- both re-created by re-running the analysis scripts.
 # Note: the `!` rules below must stay AFTER the global `*.pth` rule above,
 # since the last matching pattern wins.
-/runs/**
-!/runs/**/
-!/runs/**/*.png
-!/runs/**/*.json
-!/runs/**/*.csv
-!/runs/**/*.txt
-!/runs/**/*.yaml
-!/runs/**/*.yml
-!/runs/**/*.log
-!/runs/**/*.pth
+**/runs/**
+!**/runs/**/
+!**/runs/**/*.png
+!**/runs/**/*.json
+!**/runs/**/*.csv
+!**/runs/**/*.txt
+!**/runs/**/*.yaml
+!**/runs/**/*.yml
+!**/runs/**/*.log
+!**/runs/**/*.pth
 
 # generated artifacts left behind inside archived legacy projects (not
 # source -- training logs/plots/outputs re-created by re-running old code)

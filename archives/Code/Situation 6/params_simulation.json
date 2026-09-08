@@ -1,0 +1,36 @@
+{
+  "L": 1,
+  "Nx": 100,
+  "Nt": 300,
+  "t_end": 3,
+  "E": 1,
+  "rho": 2,
+  "AMPLITUDES": [
+    0.005,
+    0.024,
+    0.043,
+    0.062,
+    0.081,
+    0.1
+  ],
+  "PULSATIONS": [
+    7.0,
+    23.6,
+    40.2,
+    56.8,
+    73.4,
+    90.0
+  ],
+  "n_sims": 36,
+  "INPUTS": [
+    "u_dot@t",
+    "u_dot@t-dt",
+    "u_dot@t-2dt",
+    "u_xx@t",
+    "u_xx@t-dt",
+    "u_xx@t-2dt"
+  ],
+  "OUTPUTS": [
+    "delta_u@3dt"
+  ]
+}

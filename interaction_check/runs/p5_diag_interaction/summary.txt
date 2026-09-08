@@ -1,0 +1,4 @@
+Additive-effect check (weak-interaction assumption)
+
+E_short: reference=1.729e-05, M_BACK=3 alone=1.5e-05, features={U,Ut} alone=1.392e-05, combined (measured)=2.17e-05, combined (additive prediction)=1.163e-05 -- measured is 86.6% better than the additive prediction. Weak-interaction assumption does NOT hold (real interaction).
+T_max_5pct: reference=1.41, M_BACK=3 alone=1.98, features={U,Ut} alone=2.46, combined (measured)=2.4, combined (additive prediction)=3.03 -- measured is 20.8% better than the additive prediction. Weak-interaction assumption does NOT hold (real interaction).

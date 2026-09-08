@@ -25,6 +25,7 @@ import torch
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT / "src"))
+sys.path.insert(0, str(REPO_ROOT / "common"))
 
 from beamsurrogate.config import load_config, set_seeds  # noqa: E402
 from beamsurrogate.registry import MODELS, DATASETS  # noqa: E402
@@ -33,9 +34,20 @@ from beamsurrogate.evaluate.metrics import (  # noqa: E402
     evaluate_multi_rollout, aggregate_multi_rollout_metrics,
     CONTINUOUS_SCALAR_KEYS, CENSORED_TIME_KEYS,
 )
+from run_registry import find_run_dir  # noqa: E402
 
-RUNS_DIR = REPO_ROOT / "runs"
-OUT_DIR = RUNS_DIR / "p1_analysis"
+
+def _run_path(run_id: str) -> Path:
+    # Runs live under <phase>/runs/<run_id>/, the phase folder being named
+    # after what it does (baseline/, pinn_loss/, ...). find_run_dir searches
+    # for the id rather than rebuilding a path, so this keeps working
+    # wherever a run sits in the tree.
+    found = find_run_dir(REPO_ROOT, run_id)
+    if found is None:
+        raise SystemExit(f"no run folder found for {run_id!r}")
+    return found
+
+OUT_DIR = REPO_ROOT / "training_regime" / "runs" / "p1_analysis"
 SOURCES = {"Pushforward": "p1_pushforward", "TBPTT": "p1_bptt"}
 
 
@@ -44,7 +56,7 @@ def main():
     # so load once against p1_pushforward's config.yaml -- p1_bptt's model
     # is evaluated against the SAME FIELDS/bc_pairs/idx_test/norm_stats,
     # not a re-load (would be wasted work, and risks a second 32G+ spike).
-    cfg = load_config(RUNS_DIR / "p1_pushforward" / "config.yaml")
+    cfg = load_config(_run_path("p1_pushforward") / "config.yaml")
     set_seeds(cfg)
 
     dataset_path = REPO_ROOT / "data" / DATASETS[cfg.dataset]
@@ -60,9 +72,9 @@ def main():
     summaries = {}
 
     for label, run_id in SOURCES.items():
-        run_cfg = load_config(RUNS_DIR / run_id / "config.yaml")
+        run_cfg = load_config(_run_path(run_id) / "config.yaml")
         model = MODELS[run_cfg.model](len(INPUTS), len(OUTPUTS), run_cfg)
-        model.load_state_dict(torch.load(RUNS_DIR / run_id / "model.pth", weights_only=True))
+        model.load_state_dict(torch.load(_run_path(run_id) / "model.pth", weights_only=True))
         model.eval()
         print(f"Evaluating {label} ({run_id}) on {len(idx_test)} test trajectories...")
 

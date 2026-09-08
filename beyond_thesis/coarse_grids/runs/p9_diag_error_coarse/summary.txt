@@ -1,0 +1,5 @@
+p9_diag_error_coarse -- max rollout error vs grid coarsening
+
+r1 = 1 (fine, reference) (source: p3_pinn_0): final err_max=2.6260e-04  peak err_max=3.9914e-04
+r = 2 (source: p9_coarse_r2): final err_max=3.3866e-04  peak err_max=5.1627e-04
+r = 4 (source: p9_coarse_r4): final err_max=7.1540e-04  peak err_max=1.2667e-03

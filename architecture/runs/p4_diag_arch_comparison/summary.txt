@@ -1,0 +1,6 @@
+p4_diag_arch_comparison -- architecture-size ablation, 10/10 runs available
+Most stable rollout across N=99 test trajectories (t_div @ 10%): 256+128+32 (3.46s median among 89% of trajectories that diverged)
+Fastest surrogate rollout (nn wall-clock): linear (24.04ms)
+Every MLP variant has fd/nn speedup < 1 (the trained surrogate is slower wall-clock than the FD solver it replaces at this problem size); only the linear baseline beats it.
+Full table: /Users/aloishenom/Research_Project/Research_project_config-driven-campaign/architecture/runs/p4_diag_arch_comparison/table.csv
+Figures: /Users/aloishenom/Research_Project/Research_project_config-driven-campaign/architecture/runs/p4_diag_arch_comparison/figures/error_max_vs_time_all_archs.png, /Users/aloishenom/Research_Project/Research_project_config-driven-campaign/architecture/runs/p4_diag_arch_comparison/figures/error_mean_vs_time_all_archs.png

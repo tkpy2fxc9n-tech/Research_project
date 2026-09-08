@@ -31,6 +31,7 @@ import yaml
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT / "src"))
+sys.path.insert(0, str(REPO_ROOT / "common"))
 
 from beamsurrogate.config import Config, set_seeds  # noqa: E402
 from beamsurrogate.registry import MODELS, DATASETS  # noqa: E402
@@ -38,15 +39,26 @@ from beamsurrogate.data.split import load_hdf5_dataset, compute_norm_stats  # no
 from beamsurrogate.evaluate.rollout import run_rollout  # noqa: E402
 from beamsurrogate.evaluate.metrics import build_metrics  # noqa: E402
 from beamsurrogate.evaluate import plots  # noqa: E402
+from run_registry import find_run_dir  # noqa: E402
+
+
+def _run_path(run_id: str) -> Path:
+    # Runs live under <phase>/runs/<run_id>/, the phase folder being named
+    # after what it does (baseline/, pinn_loss/, ...). find_run_dir searches
+    # for the id rather than rebuilding a path, so this keeps working
+    # wherever a run sits in the tree.
+    found = find_run_dir(REPO_ROOT, run_id)
+    if found is None:
+        raise SystemExit(f"no run folder found for {run_id!r}")
+    return found
 
 DATA_DIR = REPO_ROOT / "data"
-RUNS_DIR = REPO_ROOT / "runs"
 SOURCE_RUN_ID = "p6_dataset_medium"
 EXPECTED_FAMILIES = ["gaussian", "sine_pulse", "triangular", "sawtooth", "square"]
 
 
 def _load_resolved_config(run_id: str) -> Config:
-    resolved = yaml.safe_load((RUNS_DIR / run_id / "config.resolved.yaml").read_text())
+    resolved = yaml.safe_load((_run_path(run_id) / "config.resolved.yaml").read_text())
     known = {f.name for f in dataclasses.fields(Config)}
     raw = {k: v for k, v in resolved.items() if k in known}
     for tuple_field in ("HIDDEN_SIZES", "CNN_CHANNELS"):
@@ -74,11 +86,11 @@ def main():
               f"showcase has {list(family_showcase_idx)}")
 
     model = MODELS[cfg.model](len(INPUTS), len(OUTPUTS), cfg)
-    model.load_state_dict(torch.load(RUNS_DIR / SOURCE_RUN_ID / "model.pth", weights_only=True))
+    model.load_state_dict(torch.load(_run_path(SOURCE_RUN_ID) / "model.pth", weights_only=True))
     model.eval()
     print(f"Loaded {SOURCE_RUN_ID}'s model.")
 
-    figures_dir = RUNS_DIR / SOURCE_RUN_ID / "figures"
+    figures_dir = _run_path(SOURCE_RUN_ID) / "figures"
     figures_dir.mkdir(parents=True, exist_ok=True)
 
     summary_lines = [f"{SOURCE_RUN_ID} -- one rollout per waveform family\n"]

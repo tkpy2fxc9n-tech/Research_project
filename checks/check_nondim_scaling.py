@@ -31,7 +31,7 @@ from beamsurrogate.physics.solver import run_fd_simulation_general
 from beamsurrogate.physics.waves import bc_value
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-FIGURES_DIR = REPO_ROOT / "runs" / "p14_check" / "figures"
+FIGURES_DIR = REPO_ROOT / "beyond_thesis" / "non_dimensional" / "runs" / "p14_check" / "figures"
 
 TOLERANCE = 1e-9
 # Validated categorical palette (dataviz skill, references/palette.md slots
